@@ -1,0 +1,8 @@
+
+{
+  "name": "Ecossistema PedeAí",
+  "description": "Uma plataforma completa de entrega com Aplicativo de Cliente, App de Entregador e Painel Administrativo, integrada com IA para otimização de cardápio e assistência ao cliente.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
