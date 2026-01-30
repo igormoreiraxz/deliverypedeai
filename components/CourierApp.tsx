@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  MapPin, 
-  Navigation, 
-  DollarSign, 
-  Package, 
-  Bell, 
-  User, 
-  CheckCircle, 
-  Clock, 
-  ChevronRight, 
+import {
+  MapPin,
+  Navigation,
+  DollarSign,
+  Package,
+  Bell,
+  User,
+  CheckCircle,
+  Clock,
+  ChevronRight,
   Calendar,
   CheckCircle2,
   XCircle,
@@ -19,6 +19,10 @@ import {
   WifiOff
 } from 'lucide-react';
 import { Order } from '../types';
+import NavButton from './shared/NavButton';
+import AppHeader from './shared/AppHeader';
+import Modal from './shared/Modal';
+import ChatInterface from './shared/ChatInterface';
 
 interface CourierAppProps {
   onSwitchMode: () => void;
@@ -32,9 +36,9 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
   const [activeTab, setActiveTab] = useState<CourierTab>('delivery');
   const [isOnline, setIsOnline] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
-  
+
   const courierId = 'courier-alex'; // Mock ID
-  
+
   // Couriers only see orders that are READY for pickup
   const availableOrders = orders.filter(o => o.status === 'ready');
   const myCurrentOrder = orders.find(o => o.status === 'shipping' && o.courierId === courierId);
@@ -72,51 +76,42 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
         </div>
       )}
 
-      <header className="bg-gray-900 text-white p-6 rounded-b-[2.5rem] shadow-xl relative overflow-hidden">
-        {/* Background Gradient Effect */}
-        <div className={`absolute inset-0 transition-opacity duration-1000 ${isOnline ? 'bg-gradient-to-br from-red-600/20 to-gray-900' : 'bg-gray-900'}`} />
-        
-        <div className="relative z-10">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3">
-               <div className="relative">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black italic shadow-lg transition-colors duration-500 ${isOnline ? 'bg-red-600 shadow-red-900/40' : 'bg-gray-700 shadow-black'}`}>A</div>
-                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-gray-900 rounded-full transition-colors duration-500 ${isOnline ? 'bg-green-500' : 'bg-gray-500'}`}></div>
-               </div>
-               <div>
-                 <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Entregador Pro</p>
-                 <h1 className="text-xl font-black italic tracking-tighter uppercase">Alex Driver</h1>
-               </div>
-            </div>
-            <button onClick={onSwitchMode} className="p-3 bg-gray-800/50 backdrop-blur-md rounded-2xl hover:bg-gray-700 transition-colors shadow-inner border border-white/5">
+      <AppHeader
+        variant="dark"
+        title="Alex Driver"
+        subtitle={isOnline ? 'Modo Ativo' : 'Modo Inativo'}
+        showLogo={false}
+        rightElement={
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsOnline(!isOnline)}
+              className={`relative w-14 h-7 rounded-full transition-all duration-500 p-1 ${isOnline ? 'bg-green-500' : 'bg-gray-700'}`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full shadow-lg transform transition-transform duration-500 flex items-center justify-center ${isOnline ? 'translate-x-7' : 'translate-x-0'}`}>
+                <Power size={10} className={isOnline ? 'text-green-500' : 'text-gray-400'} />
+              </div>
+            </button>
+            <button onClick={onSwitchMode} className="p-2 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors">
               <User size={18} className="text-gray-300" />
             </button>
           </div>
-          
-          <div className="bg-white/5 backdrop-blur-xl p-6 rounded-[2.5rem] border border-white/10 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase font-black tracking-[0.2em] mb-1">Ganhos de Hoje</p>
-                <p className="text-3xl font-black tracking-tighter italic">R$ {totalGains.toFixed(2)}</p>
-              </div>
-              
-              <div className="flex flex-col items-end gap-3">
-                <button 
-                  onClick={() => setIsOnline(!isOnline)}
-                  className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 ${isOnline ? 'bg-green-500' : 'bg-gray-700'}`}
-                >
-                  <div className={`w-6 h-6 bg-white rounded-full shadow-lg transform transition-transform duration-500 flex items-center justify-center ${isOnline ? 'translate-x-8' : 'translate-x-0'}`}>
-                    <Power size={12} className={isOnline ? 'text-green-500' : 'text-gray-400'} />
-                  </div>
-                </button>
-                <span className={`text-[9px] font-black tracking-widest uppercase transition-colors ${isOnline ? 'text-green-500' : 'text-gray-500'}`}>
-                  {isOnline ? 'Modo Ativo' : 'Modo Inativo'}
-                </span>
-              </div>
+        }
+      />
+
+      <div className="bg-gray-900 px-6 pb-12 pt-4 relative overflow-hidden">
+        <div className={`absolute inset-0 transition-opacity duration-1000 ${isOnline ? 'bg-gradient-to-br from-red-600/20 to-gray-900' : 'bg-gray-900'}`} />
+        <div className="relative z-10 bg-white/5 backdrop-blur-xl p-6 rounded-[2.5rem] border border-white/10 shadow-2xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase font-black tracking-[0.2em] mb-1">Ganhos de Hoje</p>
+              <p className="text-3xl font-black tracking-tighter italic text-white">R$ {totalGains.toFixed(2)}</p>
+            </div>
+            <div className="w-12 h-12 bg-red-600/20 text-red-500 rounded-2xl flex items-center justify-center">
+              <DollarSign size={24} />
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="p-4 -mt-8 space-y-6 relative z-10">
         {activeTab === 'delivery' && (
@@ -133,7 +128,7 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                     <p className="text-xl font-black italic tracking-tight leading-tight">{myCurrentOrder.address}</p>
                   </div>
                   <div className="flex gap-3">
-                    <button 
+                    <button
                       onClick={() => onUpdateOrder(myCurrentOrder.id, 'delivered')}
                       className="flex-1 bg-white text-red-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-gray-50 flex items-center justify-center gap-2"
                     >
@@ -157,13 +152,13 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                   Oportunidades
                 </h2>
                 <div className={`px-3 py-1.5 rounded-xl flex items-center gap-2 transition-colors ${isOnline ? 'bg-green-50' : 'bg-gray-100'}`}>
-                   <div className={`w-2 h-2 rounded-full transition-colors ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  <div className={`w-2 h-2 rounded-full transition-colors ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                     {isOnline ? 'Sinal Ativo' : 'Desconectado'}
-                   </span>
+                  </span>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 {!isOnline ? (
                   <div className="text-center py-20 px-8 bg-gray-50 rounded-[2.5rem] border-4 border-dashed border-gray-100 group">
@@ -174,7 +169,7 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                     <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest leading-relaxed">
                       Ative seu status acima para começar a receber notificações de entrega na sua região.
                     </p>
-                    <button 
+                    <button
                       onClick={() => setIsOnline(true)}
                       className="mt-8 bg-gray-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all"
                     >
@@ -184,8 +179,8 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                 ) : availableOrders.length === 0 ? (
                   <div className="text-center py-16 px-6 bg-red-50/30 rounded-[2rem] border-2 border-dashed border-red-100">
                     <div className="relative w-12 h-12 mx-auto mb-4">
-                       <Wifi size={40} className="text-red-200 animate-ping absolute inset-0" />
-                       <Wifi size={40} className="text-red-500 relative" />
+                      <Wifi size={40} className="text-red-200 animate-ping absolute inset-0" />
+                      <Wifi size={40} className="text-red-500 relative" />
                     </div>
                     <p className="text-red-400 font-black text-[10px] uppercase tracking-[0.2em] italic">aguardando entregas </p>
                   </div>
@@ -196,8 +191,8 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                         <div className="space-y-1">
                           <h3 className="font-black text-gray-900 italic tracking-tighter text-lg uppercase">Pedido #{order.id}</h3>
                           <div className="flex items-center text-[10px] text-gray-400 font-bold gap-2">
-                             <MapPin size={12} />
-                             {order.address.split(',')[0]}
+                            <MapPin size={12} />
+                            {order.address.split(',')[0]}
                           </div>
                         </div>
                         <div className="text-right">
@@ -205,7 +200,7 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                           <p className="text-[10px] text-gray-300 font-black tracking-widest uppercase">Ganhos</p>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => onUpdateOrder(order.id, 'shipping', courierId)}
                         disabled={!!myCurrentOrder}
                         className="w-full bg-gray-900 text-white py-4.5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest active:scale-95 disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center gap-3 hover:bg-black shadow-xl shadow-gray-100"
@@ -223,19 +218,19 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
         {activeTab === 'history' && (
           <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 space-y-6 pt-12">
             <header className="flex justify-between items-center px-2">
-               <div>
-                 <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">Minha <span className="text-red-600">Jornada</span></h2>
-                 <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Registro histórico de conquistas</p>
-               </div>
-               <div className="p-4 bg-white rounded-3xl border border-gray-100 shadow-sm">
-                 <Calendar size={20} className="text-red-600" />
-               </div>
+              <div>
+                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">Minha <span className="text-red-600">Jornada</span></h2>
+                <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Registro histórico de conquistas</p>
+              </div>
+              <div className="p-4 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                <Calendar size={20} className="text-red-600" />
+              </div>
             </header>
 
             <div className="space-y-4">
               {myHistory.length === 0 ? (
                 <div className="bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-gray-100">
-                  <HistoryIcon size={48} className="mx-auto mb-6 text-gray-100" />
+                  <Clock size={48} className="mx-auto mb-6 text-gray-100" />
                   <p className="text-gray-300 font-black text-[10px] uppercase tracking-[0.2em]">Nenhuma entrega finalizada ainda</p>
                 </div>
               ) : (
@@ -270,83 +265,54 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
             </header>
 
             <div className="bg-gray-900 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
-               <div className="relative z-10">
-                 <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-2">Saldo Disponível</p>
-                 <h3 className="text-5xl font-black italic tracking-tighter mb-8">R$ {totalGains.toFixed(2)}</h3>
-                 <button className="w-full bg-white text-gray-900 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">
-                    Solicitar Saque (PIX)
-                 </button>
-               </div>
-               <div className="absolute bottom-[-20%] right-[-10%] opacity-5 rotate-[-12deg]">
-                 <DollarSign size={200} />
-               </div>
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-2">Saldo Disponível</p>
+                <h3 className="text-5xl font-black italic tracking-tighter mb-8">R$ {totalGains.toFixed(2)}</h3>
+                <button className="w-full bg-white text-gray-900 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">
+                  Solicitar Saque (PIX)
+                </button>
+              </div>
+              <div className="absolute bottom-[-20%] right-[-10%] opacity-5 rotate-[-12deg]">
+                <DollarSign size={200} />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-               <div className="bg-white p-6 rounded-[2.5rem] border border-gray-50">
-                 <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-1">Total Mês</p>
-                 <p className="text-xl font-black italic text-gray-900 tracking-tighter">R$ 1.250,00</p>
-               </div>
-               <div className="bg-white p-6 rounded-[2.5rem] border border-gray-50">
-                 <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-1">Bônus</p>
-                 <p className="text-xl font-black italic text-red-600 tracking-tighter">R$ 120,00</p>
-               </div>
+              <div className="bg-white p-6 rounded-[2.5rem] border border-gray-50">
+                <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-1">Total Mês</p>
+                <p className="text-xl font-black italic text-gray-900 tracking-tighter">R$ 1.250,00</p>
+              </div>
+              <div className="bg-white p-6 rounded-[2.5rem] border border-gray-50">
+                <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-1">Bônus</p>
+                <p className="text-xl font-black italic text-red-600 tracking-tighter">R$ 120,00</p>
+              </div>
             </div>
           </div>
         )}
       </main>
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-5 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-[3rem]">
-        <NavButton 
-          icon={<Package size={22} />} 
-          label="Entregar" 
-          active={activeTab === 'delivery'} 
-          onClick={() => setActiveTab('delivery')} 
+        <NavButton
+          icon={<Package />}
+          label="Entregar"
+          active={activeTab === 'delivery'}
+          onClick={() => setActiveTab('delivery')}
         />
-        <NavButton 
-          icon={<DollarSign size={22} />} 
-          label="Carteira" 
-          active={activeTab === 'wallet'} 
-          onClick={() => setActiveTab('wallet')} 
+        <NavButton
+          icon={<DollarSign />}
+          label="Carteira"
+          active={activeTab === 'wallet'}
+          onClick={() => setActiveTab('wallet')}
         />
-        <NavButton 
-          icon={<Clock size={22} />} 
-          label="Histórico" 
-          active={activeTab === 'history'} 
-          onClick={() => setActiveTab('history')} 
+        <NavButton
+          icon={<Clock />}
+          label="Histórico"
+          active={activeTab === 'history'}
+          onClick={() => setActiveTab('history')}
         />
       </nav>
     </div>
   );
 };
-
-const HistoryIcon = ({ size, className }: { size: number; className?: string }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M12 8v4l3 3"></path>
-    <circle cx="12" cy="12" r="9"></circle>
-  </svg>
-);
-
-const NavButton = ({ icon, label, active = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void }) => (
-  <button 
-    onClick={onClick}
-    className={`flex flex-col items-center transition-all ${active ? 'text-red-600 scale-110' : 'text-gray-300 hover:text-gray-500'}`}
-  >
-    <div className={`${active ? 'shadow-[0_4px_10px_rgba(220,38,38,0.2)]' : ''} p-1 rounded-lg`}>
-      {icon}
-    </div>
-    <span className="text-[10px] font-black mt-1 uppercase tracking-tighter">{label}</span>
-  </button>
-);
 
 export default CourierApp;

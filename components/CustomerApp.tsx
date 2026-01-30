@@ -1,19 +1,19 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Search, 
-  ShoppingBag, 
-  MapPin, 
-  Star, 
-  Clock, 
-  Sparkles, 
-  MessageCircle, 
-  User, 
-  Filter, 
-  ChevronLeft, 
-  CreditCard, 
-  QrCode, 
-  CheckCircle2, 
+import {
+  Search,
+  ShoppingBag,
+  MapPin,
+  Star,
+  Clock,
+  Sparkles,
+  MessageCircle,
+  User,
+  Filter,
+  ChevronLeft,
+  CreditCard,
+  QrCode,
+  CheckCircle2,
   ArrowRight,
   Package,
   Send,
@@ -32,6 +32,10 @@ import {
 import { MOCK_STORES, MOCK_PRODUCTS, CATEGORIES } from '../constants';
 import { getSmartMenuSuggestions } from '../services/gemini';
 import { Order, Store, Product, Address, Message } from '../types';
+import NavButton from './shared/NavButton';
+import AppHeader from './shared/AppHeader';
+import Modal from './shared/Modal';
+import ChatInterface from './shared/ChatInterface';
 
 interface CustomerAppProps {
   onSwitchMode: () => void;
@@ -56,7 +60,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
-  
+
   // Address State
   const [addresses, setAddresses] = useState<Address[]>([
     { id: '1', label: 'Casa', details: 'Av. Paulista, 1578 - Bela Vista', complement: 'Apto 42', type: 'home' },
@@ -65,7 +69,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [selectedAddressId, setSelectedAddressId] = useState<string>('1');
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
-  
+
   // New Address Form State
   const [newAddr, setNewAddr] = useState<Partial<Address>>({ label: '', details: '', complement: '', type: 'home' });
 
@@ -73,9 +77,9 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [newMessage, setNewMessage] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const activeAddress = useMemo(() => 
+  const activeAddress = useMemo(() =>
     addresses.find(a => a.id === selectedAddressId) || addresses[0]
-  , [addresses, selectedAddressId]);
+    , [addresses, selectedAddressId]);
 
   const currentOrderMessages = useMemo(() => {
     if (!viewingOrder) return [];
@@ -211,7 +215,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
               {isAddingNewAddress ? 'Complete as informações de entrega' : 'Onde entregamos hoje?'}
             </p>
           </div>
-          <button 
+          <button
             onClick={() => { setShowAddressModal(false); setIsAddingNewAddress(false); }}
             className="p-3 bg-gray-50 text-gray-400 hover:text-red-600 rounded-2xl transition-all"
           >
@@ -221,7 +225,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
 
         {isAddingNewAddress ? (
           <form onSubmit={addNewAddress} className="p-8 space-y-6">
-            <button 
+            <button
               type="button"
               onClick={detectLocation}
               disabled={isDetectingLocation}
@@ -233,23 +237,23 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
 
             <div className="space-y-3">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Apelido (ex: Casa do João)</label>
-              <input 
+              <input
                 required
                 className="w-full bg-gray-50 border-none rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-red-500/10 shadow-inner"
                 value={newAddr.label}
-                onChange={e => setNewAddr({...newAddr, label: e.target.value})}
+                onChange={e => setNewAddr({ ...newAddr, label: e.target.value })}
                 placeholder="Nomeie este local"
               />
             </div>
-            
+
             <div className="space-y-3">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Endereço</label>
               <div className="relative">
-                <input 
+                <input
                   required
                   className="w-full bg-gray-50 border-none rounded-[1.5rem] pl-14 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-red-500/10 shadow-inner"
                   value={newAddr.details}
-                  onChange={e => setNewAddr({...newAddr, details: e.target.value})}
+                  onChange={e => setNewAddr({ ...newAddr, details: e.target.value })}
                   placeholder="Rua, número e bairro"
                 />
                 <MapPin className="absolute left-6 top-4 text-red-500" size={18} />
@@ -258,10 +262,10 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
 
             <div className="space-y-3">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Complemento / Apto</label>
-              <input 
+              <input
                 className="w-full bg-gray-50 border-none rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-red-500/10 shadow-inner"
                 value={newAddr.complement}
-                onChange={e => setNewAddr({...newAddr, complement: e.target.value})}
+                onChange={e => setNewAddr({ ...newAddr, complement: e.target.value })}
                 placeholder="Opcional"
               />
             </div>
@@ -271,7 +275,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                 <button
                   key={type}
                   type="button"
-                  onClick={() => setNewAddr({...newAddr, type})}
+                  onClick={() => setNewAddr({ ...newAddr, type })}
                   className={`flex-1 py-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${newAddr.type === type ? 'border-red-600 bg-red-50 text-red-600' : 'border-gray-100 bg-white text-gray-400'}`}
                 >
                   {type === 'home' ? <Home size={18} /> : type === 'work' ? <Briefcase size={18} /> : <MapPin size={18} />}
@@ -281,14 +285,14 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             </div>
 
             <div className="flex gap-4 pt-4">
-               <button 
+              <button
                 type="button"
                 onClick={() => setIsAddingNewAddress(false)}
                 className="flex-1 bg-gray-100 text-gray-500 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 type="submit"
                 className="flex-[2] bg-red-600 text-white py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-red-100"
               >
@@ -318,7 +322,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
               ))}
             </div>
 
-            <button 
+            <button
               onClick={() => setIsAddingNewAddress(true)}
               className="w-full mt-4 flex items-center justify-center gap-3 p-6 border-4 border-dashed border-gray-100 rounded-[2.5rem] text-gray-400 hover:border-red-200 hover:text-red-600 transition-all font-black uppercase text-xs tracking-widest"
             >
@@ -339,9 +343,8 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
           <button
             key={cat.name}
             onClick={() => setSelectedCategory(cat.name)}
-            className={`flex flex-col items-center min-w-[70px] transition-all p-2 rounded-2xl ${
-              selectedCategory === cat.name ? 'bg-red-50 ring-2 ring-red-500 scale-105' : 'bg-white'
-            }`}
+            className={`flex flex-col items-center min-w-[70px] transition-all p-2 rounded-2xl ${selectedCategory === cat.name ? 'bg-red-50 ring-2 ring-red-500 scale-105' : 'bg-white'
+              }`}
           >
             <span className="text-2xl mb-1">{cat.icon}</span>
             <span className={`text-[10px] font-bold ${selectedCategory === cat.name ? 'text-red-600' : 'text-gray-500'}`}>{cat.name}</span>
@@ -401,7 +404,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
         <div className="relative h-64 w-full">
           <img src={selectedStore.image} className="w-full h-full object-cover" alt={selectedStore.name} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          <button 
+          <button
             onClick={() => setCurrentView('catalog')}
             className="absolute top-4 left-4 p-3 bg-white/20 backdrop-blur-md text-white rounded-2xl hover:bg-white/40 transition-all"
           >
@@ -435,7 +438,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                     <p className="text-xs text-gray-400 mt-1 line-clamp-2">{product.description}</p>
                     <div className="mt-4 flex items-center justify-between">
                       <span className="text-red-600 font-black">R$ {product.price.toFixed(2)}</span>
-                      <button 
+                      <button
                         onClick={() => addToCart(product)}
                         className="p-2 bg-gray-900 text-white rounded-xl active:scale-90 transition-transform hover:bg-red-600"
                       >
@@ -491,7 +494,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                 <div className="text-xs text-gray-500 mb-4 font-medium italic">
                   {order.items.map(i => i.product.name).join(', ')}
                 </div>
-                <button 
+                <button
                   onClick={() => openOrderDetail(order)}
                   className="w-full py-3 border-2 border-gray-100 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-colors"
                 >
@@ -538,16 +541,15 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             <h2 className={`font-black text-xl mb-4 ${currentStatus.color}`}>{currentStatus.label}</h2>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((step) => (
-                <div 
-                  key={step} 
-                  className={`h-2 flex-1 rounded-full transition-all duration-700 ${
-                    step <= currentStatus.step ? 'bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]' : 'bg-gray-200'
-                  }`}
+                <div
+                  key={step}
+                  className={`h-2 flex-1 rounded-full transition-all duration-700 ${step <= currentStatus.step ? 'bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]' : 'bg-gray-200'
+                    }`}
                 />
               ))}
             </div>
             {canChat && (
-              <button 
+              <button
                 onClick={startHelpChat}
                 className="mt-6 w-full py-4 bg-white text-gray-900 border-2 border-gray-100 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50"
               >
@@ -577,7 +579,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             </div>
           </section>
 
-          <button 
+          <button
             onClick={startHelpChat}
             className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all"
           >
@@ -589,77 +591,26 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   };
 
   const SupportView = () => {
-    const chatStore = viewingOrder 
+    const chatStore = viewingOrder
       ? MOCK_STORES.find(s => s.category === viewingOrder.items[0]?.product.category) || MOCK_STORES[0]
       : MOCK_STORES[0];
 
     return (
       <main className="flex flex-col h-screen bg-white animate-in slide-in-from-bottom-10 duration-500 fixed inset-0 z-50">
-        <header className="p-4 border-b flex items-center justify-between bg-white shadow-sm shrink-0">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setCurrentView('order-detail')} className="p-2 hover:bg-gray-100 rounded-full">
-              <ChevronLeft size={24} />
-            </button>
-            <div className="relative">
-              <img src={chatStore.image} className="w-10 h-10 rounded-full object-cover border-2 border-gray-100" alt="" />
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-            </div>
-            <div>
-              <h3 className="font-black text-gray-900 text-sm leading-tight">{chatStore.name}</h3>
-              <p className="text-[10px] text-green-500 font-black uppercase tracking-widest">Loja Aberta</p>
-            </div>
-          </div>
-          <button className="p-2 text-gray-400">
-            <Phone size={20} />
-          </button>
-        </header>
+        <AppHeader
+          title={chatStore.name}
+          subtitle="Loja Aberta"
+          showLogo={false}
+          rightElement={<button className="p-2 text-gray-400"><Phone size={20} /></button>}
+          onLogoClick={() => setCurrentView('order-detail')}
+        />
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
-          <div className="text-center py-4">
-            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest bg-white px-4 py-1.5 rounded-full border border-gray-100">
-              Início do chat do pedido {viewingOrder?.id || 'PA-9999'}
-            </span>
-          </div>
-          
-          {currentOrderMessages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] p-4 rounded-3xl text-sm shadow-sm ${
-                msg.sender === 'user' 
-                  ? 'bg-red-600 text-white rounded-br-none shadow-red-100' 
-                  : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
-              }`}>
-                <p className="font-medium leading-relaxed">{msg.text}</p>
-                <p className={`text-[9px] mt-1 font-bold uppercase opacity-60 ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
-                  {msg.timestamp}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="p-4 bg-white border-t border-gray-100 shrink-0">
-          <div className="relative flex items-center gap-2">
-            <div className="flex-1 relative">
-              <input 
-                type="text" 
-                placeholder="Escreva para a loja..."
-                className="w-full pl-6 pr-12 py-4 bg-gray-100 rounded-[2rem] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 border-none shadow-inner"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              />
-              <button 
-                onClick={handleSendMessage}
-                disabled={!newMessage.trim()}
-                className={`absolute right-2 top-2 p-2 rounded-full shadow-lg transition-all ${
-                  newMessage.trim() ? 'bg-red-600 text-white scale-100' : 'bg-gray-200 text-gray-400 scale-90'
-                }`}
-              >
-                <Send size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
+        <ChatInterface
+          messages={currentOrderMessages}
+          onSendMessage={(text) => viewingOrder && onSendMessage(viewingOrder.id, text, 'user')}
+          senderRole="user"
+          placeholder="Escreva para a loja..."
+        />
       </main>
     );
   };
@@ -731,7 +682,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
               ))}
             </div>
           </section>
-          
+
           <section className="bg-gray-50 p-6 rounded-[2.5rem] border border-gray-100">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">Endereço de Entrega</h2>
@@ -754,9 +705,9 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Forma de Pagamento</h2>
             <div className="grid grid-cols-3 gap-3">
               {(['pix', 'card', 'cash'] as const).map(m => (
-                <button 
+                <button
                   key={m}
-                  onClick={() => setPaymentMethod(m)} 
+                  onClick={() => setPaymentMethod(m)}
                   className={`p-4 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2 group ${paymentMethod === m ? 'border-red-600 bg-red-50 text-red-600' : 'border-gray-100 text-gray-300 hover:border-gray-300'}`}
                 >
                   <div className={`p-3 rounded-2xl ${paymentMethod === m ? 'bg-red-100' : 'bg-gray-50'}`}>
@@ -775,7 +726,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             </div>
           </section>
         </main>
-        
+
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md p-6 bg-white border-t border-gray-100 z-20 shadow-2xl rounded-t-[2.5rem]">
           <button onClick={handlePlaceOrder} disabled={isProcessing} className={`w-full py-5 rounded-[2rem] font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-red-100 ${isProcessing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]'}`}>
             {isProcessing ? <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" /> : <>Finalizar Pedido <ArrowRight size={20} /></>}
@@ -788,40 +739,42 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen shadow-lg pb-24">
       {currentView !== 'store' && currentView !== 'order-detail' && currentView !== 'support' && (
-        <header className="p-4 border-b sticky top-0 bg-white z-20 animate-in fade-in">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center text-red-600 font-black text-2xl italic tracking-tighter cursor-pointer gap-1" onClick={() => setCurrentView('catalog')}>
-              <Zap className="fill-red-600 text-red-600" />
-              <span>PedeAí</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowAddressModal(true)} className="flex items-center text-sm font-semibold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors">
-                <MapPin size={14} className="mr-1 text-red-600" />
-                <span className="max-w-[120px] truncate">{activeAddress.label}</span>
-              </button>
-              <button onClick={onSwitchMode} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                <User size={18} className="text-gray-600" />
+        <>
+          <AppHeader
+            showLogo={true}
+            onLogoClick={() => setCurrentView('catalog')}
+            rightElement={
+              <div className="flex items-center gap-3">
+                <button onClick={() => setShowAddressModal(true)} className="flex items-center text-sm font-semibold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors">
+                  <MapPin size={14} className="mr-1 text-red-600" />
+                  <span className="max-w-[120px] truncate">{activeAddress.label}</span>
+                </button>
+                <button onClick={onSwitchMode} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                  <User size={18} className="text-gray-600" />
+                </button>
+              </div>
+            }
+          />
+
+          <div className="p-4 bg-white sticky top-[73px] z-10 border-b">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar por lojas ou pratos..."
+                className="w-full pl-10 pr-12 py-3.5 bg-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-all border-none"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  if (currentView !== 'search' && currentView !== 'store') setCurrentView('search');
+                }}
+              />
+              <Search className="absolute left-3.5 top-4 text-gray-400" size={18} />
+              <button onClick={handleAskAi} className={`absolute right-2 top-2 p-2 rounded-xl transition-all ${loadingAi ? 'bg-gray-200 animate-pulse' : 'bg-red-500 hover:bg-red-600'} text-white shadow-lg`}>
+                {loadingAi ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles size={18} />}
               </button>
             </div>
           </div>
-          
-          <div className="relative">
-            <input 
-              type="text" 
-              placeholder="Buscar por lojas ou pratos..."
-              className="w-full pl-10 pr-12 py-3.5 bg-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-all border-none"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                if (currentView !== 'search' && currentView !== 'store') setCurrentView('search');
-              }}
-            />
-            <Search className="absolute left-3.5 top-4 text-gray-400" size={18} />
-            <button onClick={handleAskAi} className={`absolute right-2 top-2 p-2 rounded-xl transition-all ${loadingAi ? 'bg-gray-200 animate-pulse' : 'bg-red-500 hover:bg-red-600'} text-white shadow-lg`}>
-              {loadingAi ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles size={18} />}
-            </button>
-          </div>
-        </header>
+        </>
       )}
 
       {currentView === 'catalog' && <CatalogView />}
@@ -831,11 +784,124 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       {currentView === 'order-detail' && <OrderDetailView />}
       {currentView === 'support' && <SupportView />}
 
-      {showAddressModal && <AddressModal />}
+      <Modal
+        isOpen={showAddressModal}
+        onClose={() => { setShowAddressModal(false); setIsAddingNewAddress(false); }}
+        title={isAddingNewAddress ? 'Novo Endereço' : 'Seus Locais'}
+        subtitle={isAddingNewAddress ? 'Complete as informações de entrega' : 'Onde entregamos hoje?'}
+      >
+        {isAddingNewAddress ? (
+          <form onSubmit={addNewAddress} className="p-8 space-y-6">
+            <button
+              type="button"
+              onClick={detectLocation}
+              disabled={isDetectingLocation}
+              className="w-full bg-red-50 text-red-600 p-4 rounded-2xl border-2 border-red-100 flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
+            >
+              {isDetectingLocation ? <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" /> : <LocateFixed size={18} />}
+              {isDetectingLocation ? 'Buscando sinal...' : 'Usar minha localização atual'}
+            </button>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Apelido (ex: Casa do João)</label>
+              <input
+                required
+                className="w-full bg-gray-50 border-none rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-red-500/10 shadow-inner"
+                value={newAddr.label}
+                onChange={e => setNewAddr({ ...newAddr, label: e.target.value })}
+                placeholder="Nomeie este local"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Endereço</label>
+              <div className="relative">
+                <input
+                  required
+                  className="w-full bg-gray-50 border-none rounded-[1.5rem] pl-14 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-red-500/10 shadow-inner"
+                  value={newAddr.details}
+                  onChange={e => setNewAddr({ ...newAddr, details: e.target.value })}
+                  placeholder="Rua, número e bairro"
+                />
+                <MapPin className="absolute left-6 top-4 text-red-500" size={18} />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Complemento / Apto</label>
+              <input
+                className="w-full bg-gray-50 border-none rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-red-500/10 shadow-inner"
+                value={newAddr.complement}
+                onChange={e => setNewAddr({ ...newAddr, complement: e.target.value })}
+                placeholder="Opcional"
+              />
+            </div>
+
+            <div className="flex gap-4">
+              {(['home', 'work', 'other'] as const).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setNewAddr({ ...newAddr, type })}
+                  className={`flex-1 py-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${newAddr.type === type ? 'border-red-600 bg-red-50 text-red-600' : 'border-gray-100 bg-white text-gray-400'}`}
+                >
+                  {type === 'home' ? <Home size={18} /> : type === 'work' ? <Briefcase size={18} /> : <MapPin size={18} />}
+                  <span className="text-[9px] font-black uppercase tracking-widest">{type === 'home' ? 'Casa' : type === 'work' ? 'Trampo' : 'Outro'}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setIsAddingNewAddress(false)}
+                className="flex-1 bg-gray-100 text-gray-500 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-[2] bg-red-600 text-white py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-red-100"
+              >
+                Adicionar Local
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="p-8 space-y-4">
+            <div className="space-y-3 max-h-80 overflow-y-auto no-scrollbar pr-1">
+              {addresses.map(addr => (
+                <button
+                  key={addr.id}
+                  onClick={() => { setSelectedAddressId(addr.id); setShowAddressModal(false); }}
+                  className={`w-full text-left p-6 rounded-[2.5rem] border-2 transition-all flex items-center gap-5 ${selectedAddressId === addr.id ? 'border-red-600 bg-red-50' : 'border-gray-50 bg-white hover:border-gray-200'}`}
+                >
+                  <div className={`w-14 h-14 rounded-[1.5rem] flex items-center justify-center shrink-0 ${selectedAddressId === addr.id ? 'bg-red-600 text-white shadow-lg shadow-red-200' : 'bg-gray-100 text-gray-400'}`}>
+                    {addr.type === 'home' ? <Home size={24} /> : addr.type === 'work' ? <Briefcase size={24} /> : <MapPin size={24} />}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-black italic text-gray-900 uppercase text-sm">{addr.label}</h4>
+                    <p className="text-xs text-gray-500 font-medium truncate">{addr.details}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">{addr.complement}</p>
+                  </div>
+                  {selectedAddressId === addr.id && <CheckCircle2 size={24} className="text-red-600" />}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setIsAddingNewAddress(true)}
+              className="w-full mt-4 flex items-center justify-center gap-3 p-6 border-4 border-dashed border-gray-100 rounded-[2.5rem] text-gray-400 hover:border-red-200 hover:text-red-600 transition-all font-black uppercase text-xs tracking-widest"
+            >
+              <Plus size={20} /> Adicionar Novo Endereço
+            </button>
+          </div>
+        )}
+      </Modal>
 
       {cart.length > 0 && !['checkout', 'success', 'order-detail', 'support'].includes(currentView) && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-xs px-4 animate-in slide-in-from-bottom-10 z-40">
-          <button 
+          <button
             onClick={() => setCurrentView('checkout')}
             className="w-full bg-red-600 text-white py-4 rounded-3xl font-black shadow-[0_20px_50px_rgba(220,38,38,0.3)] flex justify-between px-8 hover:bg-red-700 transition-all transform active:scale-95"
           >
@@ -846,43 +912,13 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       )}
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-4 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] rounded-t-[2.5rem]">
-        <NavButton 
-          icon={<ShoppingBag size={22} />} 
-          label="Explorar" 
-          active={currentView === 'catalog' || currentView === 'store'} 
-          onClick={() => setCurrentView('catalog')}
-        />
-        <NavButton 
-          icon={<Search size={22} />} 
-          label="Buscar" 
-          active={currentView === 'search'} 
-          onClick={() => setCurrentView('search')}
-        />
-        <NavButton 
-          icon={<Clock size={22} />} 
-          label="Pedidos" 
-          active={currentView === 'orders' || currentView === 'order-detail'} 
-          onClick={() => setCurrentView('orders')}
-        />
-        <NavButton 
-          icon={<MessageCircle size={22} />} 
-          label="Suporte" 
-          active={currentView === 'support'} 
-          onClick={() => setCurrentView('support')}
-        />
+        <NavButton icon={<ShoppingBag />} label="Explorar" active={currentView === 'catalog' || currentView === 'store'} onClick={() => setCurrentView('catalog')} />
+        <NavButton icon={<Search />} label="Buscar" active={currentView === 'search'} onClick={() => setCurrentView('search')} />
+        <NavButton icon={<Clock />} label="Pedidos" active={currentView === 'orders'} onClick={() => setCurrentView('orders')} />
+        <NavButton icon={<MessageCircle />} label="Suporte" active={currentView === 'support'} onClick={() => setCurrentView('support')} />
       </nav>
     </div>
   );
 };
-
-const NavButton = ({ icon, label, active = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void }) => (
-  <button 
-    onClick={onClick}
-    className={`flex flex-col items-center transition-all ${active ? 'text-red-600 scale-110' : 'text-gray-300 hover:text-gray-500'}`}
-  >
-    {icon}
-    <span className="text-[10px] font-black mt-1 uppercase tracking-tighter">{label}</span>
-  </button>
-);
 
 export default CustomerApp;
