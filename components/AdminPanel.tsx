@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { getCurrentProfile, updateStoreProfile, Profile } from '../services/profiles';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -16,7 +17,8 @@ import {
   Camera,
   Image as ImageIcon,
   Loader2,
-  Info
+  Info,
+  Settings
 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { CATEGORIES } from '../constants';
@@ -79,6 +81,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [storeProfile, setStoreProfile] = useState<Profile | null>(null);
+  const [storeImageFile, setStoreImageFile] = useState<File | null>(null);
+  const [storeImagePreview, setStoreImagePreview] = useState<string | null>(null);
+  const [isUploadingStoreImage, setIsUploadingStoreImage] = useState(false);
 
   useEffect(() => {
     let orderSub: any;
@@ -89,12 +95,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           setStoreId(user.id);
-          const [products, fetchedOrders] = await Promise.all([
+          const [products, fetchedOrders, profile] = await Promise.all([
             getProductsByStore(user.id),
-            getOrdersByStore(user.id)
+            getOrdersByStore(user.id),
+            getCurrentProfile()
           ]);
           setLocalProducts(products);
           setDbOrders(fetchedOrders);
+          setStoreProfile(profile);
+          if (profile?.image_url) {
+            setStoreImagePreview(profile.image_url);
+          }
 
           orderSub = subscribeToStoreOrders(user.id, (order, eventType) => {
             setDbOrders(prev => {
@@ -224,6 +235,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
     }
   };
 
+  const handleStoreImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setStoreImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setStoreImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpdateStoreImage = async () => {
+    if (!storeId || !storeImageFile) return;
+
+    setIsUploadingStoreImage(true);
+    const uploadedUrl = await uploadProductImage(storeImageFile, storeId);
+
+    if (uploadedUrl) {
+      const success = await updateStoreProfile(storeId, { image_url: uploadedUrl });
+      if (success) {
+        setStoreProfile(prev => prev ? { ...prev, image_url: uploadedUrl } : null);
+        alert('Imagem da loja atualizada com sucesso!');
+      } else {
+        alert('Erro ao atualizar imagem da loja.');
+      }
+    } else {
+      alert('Erro ao fazer upload da imagem.');
+    }
+    setIsUploadingStoreImage(false);
+  };
+
   const handleUpdateStatus = async (id: string, status: Order['status']) => {
     const success = await updateOrderStatus(id, status);
 
@@ -307,6 +350,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
           <button onClick={() => setActiveTab('inventory')} className={`w-full flex items-center p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'inventory' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:bg-gray-100'}`}>
             <ShoppingBag className="mr-3" size={20} /> Cardápio
           </button>
+          <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:bg-gray-100'}`}>
+            <Settings className="mr-3" size={20} /> Configurações
+          </button>
         </nav>
 
         <div className="p-4 border-t space-y-2">
@@ -318,7 +364,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
 
       <main className="flex-1 overflow-y-auto pb-32 lg:pb-0">
         <AppHeader
-          title={activeTab === 'dashboard' ? 'Métricas' : activeTab === 'orders' ? 'Pedidos' : 'Cardápio'}
+          title={activeTab === 'dashboard' ? 'Métricas' : activeTab === 'orders' ? 'Pedidos' : activeTab === 'settings' ? 'Configurações' : 'Cardápio'}
           rightElement={
             <button onClick={onSwitchMode} className="p-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all shadow-sm">
               <LogOut size={20} />
@@ -539,6 +585,57 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
               </div>
             </div>
           )}
+
+          {activeTab === 'settings' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-sm border-2 border-gray-50 p-6 lg:p-8">
+                <h3 className="font-black italic text-lg lg:text-xl uppercase tracking-tighter mb-6">Imagem de Destaque</h3>
+                <div className="flex flex-col items-center gap-6">
+                  <div className="relative w-full max-w-md h-48 rounded-3xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 group">
+                    {storeImagePreview ? (
+                      <img src={storeImagePreview} className="w-full h-full object-cover" alt="Store Preview" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                        <ImageIcon size={48} />
+                        <span className="text-xs font-black uppercase mt-2">Sem Imagem</span>
+                      </div>
+                    )}
+                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                      <Camera className="text-white" size={32} />
+                      <input type="file" className="hidden" accept="image/*" onChange={handleStoreImageChange} />
+                    </label>
+                  </div>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest text-center">Esta imagem será exibida no app do cliente</p>
+                  <button
+                    onClick={handleUpdateStoreImage}
+                    disabled={!storeImageFile || isUploadingStoreImage}
+                    className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-xl"
+                  >
+                    {isUploadingStoreImage ? <Loader2 className="animate-spin" size={18} /> : <Camera size={18} />}
+                    {isUploadingStoreImage ? 'Salvando...' : 'Atualizar Imagem'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-sm border-2 border-gray-50 p-6 lg:p-8">
+                <h3 className="font-black italic text-lg lg:text-xl uppercase tracking-tighter mb-6">Informações da Loja</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-3">Nome da Loja</label>
+                    <p className="text-lg font-black text-gray-900 p-4 bg-gray-50 rounded-xl mt-2">{storeProfile?.full_name || 'Carregando...'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-3">Categoria</label>
+                    <p className="text-lg font-black text-gray-900 p-4 bg-gray-50 rounded-xl mt-2">{storeProfile?.category || 'Não definida'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-3">Avaliação</label>
+                    <p className="text-lg font-black text-gray-900 p-4 bg-gray-50 rounded-xl mt-2">{storeProfile?.rating || 5.0} ⭐</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -546,6 +643,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
         <NavButton icon={<LayoutDashboard />} label="Painel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
         <NavButton icon={<Package />} label="Pedidos" active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} />
         <NavButton icon={<ShoppingBag />} label="Cardápio" active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} />
+        <NavButton icon={<Settings />} label="Config" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
       </nav>
 
       <Modal
