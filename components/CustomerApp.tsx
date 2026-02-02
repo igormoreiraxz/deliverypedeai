@@ -724,14 +724,21 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Seus Itens</h2>
             <div className="space-y-4">
               {cart.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between group">
+                <div key={idx} className="flex items-center justify-between group bg-gray-50/50 p-3 rounded-2xl border border-transparent hover:border-gray-100 transition-all">
                   <div className="flex items-center gap-4">
                     <img src={item.image} className="w-14 h-14 rounded-2xl object-cover shadow-sm" alt="" />
                     <div>
-                      <p className="font-bold text-gray-900">{item.name}</p>
+                      <p className="font-bold text-gray-900 text-sm">{item.name}</p>
                       <p className="text-xs text-red-600 font-black">R${item.price.toFixed(2)}</p>
                     </div>
                   </div>
+                  <button
+                    onClick={() => removeFromCart(idx)}
+                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                    title="Remover"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -799,12 +806,16 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             onLogoClick={() => setCurrentView('catalog')}
             rightElement={
               <div className="flex items-center gap-3">
-                <button onClick={() => setShowAddressModal(true)} className="flex items-center text-sm font-semibold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors">
-                  <MapPin size={14} className="mr-1 text-red-600" />
+                <button
+                  onClick={() => setShowAddressModal(true)}
+                  className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-600 bg-gray-50 border border-gray-100 px-4 py-2 rounded-2xl hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all shadow-sm group"
+                >
+                  <MapPin size={14} className="mr-2 text-red-500 group-hover:animate-bounce" />
                   <span className="max-w-[120px] truncate">{activeAddress.label}</span>
+                  <ChevronLeft size={14} className="ml-1 -rotate-90 opacity-40" />
                 </button>
-                <button onClick={onSwitchMode} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                  <User size={18} className="text-gray-600" />
+                <button onClick={onSwitchMode} className="p-2.5 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-gray-100 transition-all shadow-sm">
+                  <User size={18} className="text-gray-400" />
                 </button>
               </div>
             }
