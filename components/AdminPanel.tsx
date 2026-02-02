@@ -42,15 +42,7 @@ interface AdminPanelProps {
   onSendMessage: (orderId: string, text: string, sender: 'user' | 'store') => void;
 }
 
-const chartData = [
-  { name: 'Seg', sales: 4000 },
-  { name: 'Ter', sales: 3000 },
-  { name: 'Qua', sales: 2000 },
-  { name: 'Qui', sales: 2780 },
-  { name: 'Sex', sales: 1890 },
-  { name: 'Sáb', sales: 2390 },
-  { name: 'Dom', sales: 3490 },
-];
+
 
 const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
   <div className="bg-white p-5 lg:p-7 rounded-[2rem] lg:rounded-[2.5rem] shadow-sm border-2 border-gray-50">
@@ -398,17 +390,47 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
                   <div className="bg-gray-50 w-fit px-3 py-1.5 rounded-xl text-[10px] font-black text-gray-400 uppercase tracking-widest">Últimos 7 dias</div>
                 </div>
                 <div className="h-48 lg:h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold' }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold' }} />
-                      <Tooltip
-                        contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', fontWeight: 'bold' }}
-                      />
-                      <Line type="monotone" dataKey="sales" stroke="#dc2626" strokeWidth={4} dot={{ r: 4, fill: '#dc2626', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {(() => {
+                    // Generate chart data from real orders
+                    const today = new Date();
+                    const last7Days = Array.from({ length: 7 }, (_, i) => {
+                      const date = new Date(today);
+                      date.setDate(date.getDate() - (6 - i));
+                      return date;
+                    });
+
+                    const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+                    const chartData = last7Days.map(date => {
+                      const dayRevenue = dbOrders
+                        .filter(order => {
+                          if (order.status !== 'delivered') return false;
+                          const orderDate = new Date(order.created_at);
+                          return orderDate.toDateString() === date.toDateString();
+                        })
+                        .reduce((sum, order) => sum + order.total, 0);
+
+                      return {
+                        name: dayNames[date.getDay()],
+                        sales: dayRevenue
+                      };
+                    });
+
+                    return (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold' }} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold' }} />
+                          <Tooltip
+                            contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', fontWeight: 'bold' }}
+                            formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Faturamento']}
+                          />
+                          <Line type="monotone" dataKey="sales" stroke="#dc2626" strokeWidth={4} dot={{ r: 4, fill: '#dc2626', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    );
+                  })()}
                 </div>
               </div>
             </>
