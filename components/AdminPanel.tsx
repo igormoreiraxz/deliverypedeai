@@ -247,9 +247,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
 
   const handleSendMessageLocally = async (text: string) => {
     if (!activeChatOrder || !storeId || !text.trim()) return;
+
+    const tempId = Date.now().toString();
+    const optimisticMsg: Message = {
+      id: tempId,
+      order_id: activeChatOrder.id,
+      sender_id: storeId,
+      text: text,
+      sender: 'store',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      created_at: new Date().toISOString()
+    };
+
+    setOrderMessages(prev => [...prev, optimisticMsg]);
+
     const sent = await sendOrderMessage(activeChatOrder.id, storeId, text);
     if (sent) {
-      setOrderMessages(prev => [...prev, { ...sent, sender: 'store' }]);
+      setOrderMessages(prev => prev.map(m => m.id === tempId ? { ...sent, sender: 'store' } : m));
+    } else {
+      setOrderMessages(prev => prev.filter(m => m.id !== tempId));
+      alert('Erro ao enviar mensagem.');
     }
   };
 
