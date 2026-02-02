@@ -143,7 +143,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const activeAddress = useMemo(() =>
-    addresses.find(a => a.id === selectedAddressId) || addresses[0]
+    addresses.find(a => a.id === selectedAddressId) || addresses[0] || null
     , [addresses, selectedAddressId]);
 
   const currentOrderMessages = useMemo(() => {
@@ -944,15 +944,21 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
               <button onClick={() => setShowAddressModal(true)} className="text-red-600 text-xs font-bold">Alterar Local</button>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-red-600 text-white rounded-xl flex items-center justify-center shrink-0">
-                {activeAddress.type === 'home' ? <Home size={18} /> : activeAddress.type === 'work' ? <Briefcase size={18} /> : <MapPin size={18} />}
-              </div>
-              <div>
-                <p className="font-bold text-gray-900">{activeAddress.label}</p>
-                <p className="text-xs text-gray-500 font-medium italic">
-                  {activeAddress.details}{activeAddress.complement ? ` - ${activeAddress.complement}` : ''}
-                </p>
-              </div>
+              {activeAddress ? (
+                <>
+                  <div className="w-10 h-10 bg-red-600 text-white rounded-xl flex items-center justify-center shrink-0">
+                    {activeAddress.type === 'home' ? <Home size={18} /> : activeAddress.type === 'work' ? <Briefcase size={18} /> : <MapPin size={18} />}
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900">{activeAddress.label}</p>
+                    <p className="text-xs text-gray-500 font-medium italic">
+                      {activeAddress.details}{activeAddress.complement ? ` - ${activeAddress.complement}` : ''}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-gray-400 italic">Nenhum endereço selecionado</p>
+              )}
             </div>
           </section>
 
@@ -1006,7 +1012,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                 >
                   <MapPin size={14} className="mr-2 text-red-500 group-hover:animate-bounce" />
                   <span className="max-w-[150px] truncate">
-                    {activeAddress.id === 'current' ? activeAddress.details : activeAddress.label}
+                    {activeAddress ? (activeAddress.id === 'current' ? activeAddress.details : activeAddress.label) : 'Adicionar Endereço'}
                   </span>
                   <ChevronLeft size={14} className="ml-1 -rotate-90 opacity-40" />
                 </button>
