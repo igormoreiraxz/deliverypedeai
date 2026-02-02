@@ -81,29 +81,39 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
+    let orderSub: any;
+
     const initPanel = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setStoreId(user.id);
-        const [products, fetchedOrders] = await Promise.all([
-          getProductsByStore(user.id),
-          getOrdersByStore(user.id)
-        ]);
-        setLocalProducts(products);
-        setDbOrders(fetchedOrders);
+      setLoadingProducts(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setStoreId(user.id);
+          const [products, fetchedOrders] = await Promise.all([
+            getProductsByStore(user.id),
+            getOrdersByStore(user.id)
+          ]);
+          setLocalProducts(products);
+          setDbOrders(fetchedOrders);
 
-        const orderSub = subscribeToStoreOrders(user.id, (newOrder) => {
-          setDbOrders(prev => [newOrder, ...prev]);
-        });
-
-        return () => {
-          orderSub.unsubscribe();
-        };
+          orderSub = subscribeToStoreOrders(user.id, (newOrder) => {
+            setDbOrders(prev => [newOrder, ...prev]);
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing Admin Panel:', error);
+      } finally {
+        setLoadingProducts(false);
       }
-      setLoadingProducts(false);
     };
 
     initPanel();
+
+    return () => {
+      if (orderSub) {
+        orderSub.unsubscribe();
+      }
+    };
   }, []);
 
   useEffect(() => {
