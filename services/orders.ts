@@ -80,6 +80,19 @@ export const getOrdersByStore = async (storeId: string): Promise<Order[]> => {
     }));
 };
 
+export const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<boolean> => {
+    const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+
+    if (error) {
+        console.error('Error updating order status:', error);
+        return false;
+    }
+    return true;
+};
+
 export const subscribeToStoreOrders = (storeId: string, callback: (order: Order, eventType: 'INSERT' | 'UPDATE') => void) => {
     return supabase
         .channel(`store_orders:${storeId}`)

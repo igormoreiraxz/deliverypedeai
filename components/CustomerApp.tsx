@@ -36,7 +36,7 @@ import { getAllProducts, getProductsByStore } from '../services/products';
 import { getRegisteredStores } from '../services/stores';
 import { getSupportMessages, sendSupportMessage, subscribeToSupportMessages, SupportMessage as SupportMessageType } from '../services/support';
 import { Order, Store, Product, Address, Message } from '../types';
-import { createOrder, getOrdersByCustomer, getOrderMessages, sendOrderMessage, subscribeToOrderMessages, subscribeToCustomerOrders } from '../services/orders';
+import { createOrder, getOrdersByCustomer, getOrderMessages, sendOrderMessage, subscribeToOrderMessages, subscribeToCustomerOrders, updateOrderStatus } from '../services/orders';
 import NavButton from './shared/NavButton';
 import AppHeader from './shared/AppHeader';
 import Modal from './shared/Modal';
@@ -250,6 +250,20 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       // Handle error: remove optimistic message or show error state
       setOrderMessages(prev => prev.filter(m => m.id !== tempId));
       alert('Erro ao enviar mensagem. Tente novamente.');
+    }
+  };
+
+  const handleCancelOrder = async (id: string) => {
+    if (!confirm('Tem certeza que deseja cancelar este pedido?')) return;
+
+    const success = await updateOrderStatus(id, 'cancelled');
+    if (success) {
+      setDbOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'cancelled' } : o));
+      if (viewingOrder && viewingOrder.id === id) {
+        setViewingOrder({ ...viewingOrder, status: 'cancelled' });
+      }
+    } else {
+      alert('Erro ao cancelar pedido. Tente novamente.');
     }
   };
 
@@ -721,6 +735,15 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                   Falar com o Estabelecimento <MessageCircle size={18} />
                 </button>
               )}
+
+              {viewingOrder.status === 'pending' && (
+                <button
+                  onClick={() => handleCancelOrder(viewingOrder.id)}
+                  className="w-full py-4 bg-red-50 text-red-600 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-100 transition-all border-2 border-red-100/50"
+                >
+                  <X size={16} /> Cancelar Pedido
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 opacity-60">
@@ -750,7 +773,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             />
           </div>
         </Modal>
-      </main>
+      </main >
     );
   };
 

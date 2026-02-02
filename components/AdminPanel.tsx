@@ -28,7 +28,7 @@ import ChatInterface from './shared/ChatInterface';
 import { supabase } from '../services/supabase';
 import { getProductsByStore, addProduct, deleteProduct } from '../services/products';
 import { uploadProductImage } from '../services/storage';
-import { getOrdersByStore, subscribeToStoreOrders, getOrderMessages, sendOrderMessage, subscribeToOrderMessages } from '../services/orders';
+import { getOrdersByStore, subscribeToStoreOrders, getOrderMessages, sendOrderMessage, subscribeToOrderMessages, updateOrderStatus } from '../services/orders';
 
 interface AdminPanelProps {
   onSwitchMode: () => void;
@@ -225,12 +225,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
   };
 
   const handleUpdateStatus = async (id: string, status: Order['status']) => {
-    const { error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', id);
+    const success = await updateOrderStatus(id, status);
 
-    if (!error) {
+    if (success) {
       setDbOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
     } else {
       alert('Erro ao atualizar status.');
