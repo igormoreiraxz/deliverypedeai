@@ -158,7 +158,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
     if (viewingOrder && currentUser) {
       const fetchMessages = async () => {
         const msgs = await getOrderMessages(viewingOrder.id, currentUser.id);
-        setOrderMessages(msgs);
+        msgs && setOrderMessages(msgs);
       };
       fetchMessages();
 
@@ -168,7 +168,6 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
           sender: msg.sender_id === currentUser.id ? 'user' : 'store'
         };
         setOrderMessages(prev => {
-          // Avoid duplicates if we already added it locally
           if (prev.some(m => m.id === mappedMsg.id)) return prev;
           return [...prev, mappedMsg];
         });
@@ -179,6 +178,11 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       };
     }
   }, [viewingOrder, currentUser]);
+
+  // Auto-detect location on load
+  useEffect(() => {
+    detectLocation();
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -194,20 +198,59 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
 
     setIsDetectingLocation(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setTimeout(() => {
+      async (position) => {
+        try {
+          // Reverse geocoding using Nominatim (free)
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&zoom=18&addressdetails=1`, {
+            headers: { 'Accept-Language': 'pt-BR' }
+          });
+          const data = await response.json();
+
+          const street = data.address?.road || data.address?.pedestrian || '';
+          const number = data.address?.house_number || '';
+          const suburb = data.address?.suburb || data.address?.neighbourhood || '';
+          const city = data.address?.city || data.address?.town || '';
+
+          const readableAddress = street ? `${street}${number ? ', ' + number : ''}${suburb ? ' - ' + suburb : ''}${city ? ' (' + city + ')' : ''}` : `Latitude: ${position.coords.latitude.toFixed(4)}, Longitude: ${position.coords.longitude.toFixed(4)}`;
+
+          const locationAddr: Address = {
+            id: 'current',
+            label: 'Localização Atual',
+            details: readableAddress,
+            type: 'other'
+          };
+
+          // Update addresses to include this dynamic one
+          setAddresses(prev => {
+            const filtered = prev.filter(a => a.id !== 'current');
+            return [locationAddr, ...filtered];
+          });
+
+          setSelectedAddressId('current');
+
           setNewAddr(prev => ({
             ...prev,
-            details: `Latitude: ${position.coords.latitude.toFixed(4)}, Longitude: ${position.coords.longitude.toFixed(4)} (Localização Detectada)`,
+            details: readableAddress,
             label: 'Localização Atual'
           }));
+        } catch (error) {
+          console.error('Error in reverse geocoding:', error);
+          setNewAddr(prev => ({
+            ...prev,
+            details: `Latitude: ${position.coords.latitude.toFixed(4)}, Longitude: ${position.coords.longitude.toFixed(4)}`,
+            label: 'Localização Atual'
+          }));
+        } finally {
           setIsDetectingLocation(false);
-        }, 1500);
+        }
       },
       (error) => {
         setIsDetectingLocation(false);
-        alert("Não foi possível obter sua localização. Por favor, digite manualmente.");
-      }
+        console.warn('Geolocation error:', error);
+        // Don't alert on auto-load to avoid annoying people who blocked it
+        if (showAddressModal) alert("Não foi possível obter sua localização. Por favor, digite manualmente.");
+      },
+      { timeout: 10000 }
     );
   };
 
