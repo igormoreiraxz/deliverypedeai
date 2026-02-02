@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { getCurrentProfile, Profile } from '../services/profiles';
 import {
   MapPin,
   Navigation,
@@ -28,6 +29,7 @@ interface CourierAppProps {
   onSwitchMode: () => void;
   orders: Order[];
   onUpdateOrder: (id: string, status: Order['status'], courierId?: string) => void;
+  currentUser?: Profile | null;
 }
 
 type CourierTab = 'delivery' | 'wallet' | 'history';
@@ -36,8 +38,17 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
   const [activeTab, setActiveTab] = useState<CourierTab>('delivery');
   const [isOnline, setIsOnline] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
-  const courierId = 'courier-alex'; // Mock ID
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const p = await getCurrentProfile();
+      setProfile(p);
+    };
+    fetchProfile();
+  }, []);
+
+  const courierId = profile?.id || 'courier-loading';
 
   // Couriers only see orders that are READY for pickup
   const availableOrders = orders.filter(o => o.status === 'ready');
@@ -78,7 +89,7 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
 
       <AppHeader
         variant="dark"
-        title="Alex Driver"
+        title={profile?.full_name || 'Carregando...'}
         subtitle={isOnline ? 'Modo Ativo' : 'Modo Inativo'}
         showLogo={false}
         rightElement={
