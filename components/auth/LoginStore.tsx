@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { AppView } from '../../types';
-import { Mail, Lock, Store, ArrowRight, ChevronLeft, Loader2, Zap } from 'lucide-react';
+import { Mail, Lock, Store, ArrowRight, ChevronLeft, Loader2, Zap, Building2 } from 'lucide-react';
 
 interface LoginStoreProps {
     onBack: () => void;
@@ -14,6 +14,7 @@ const LoginStore: React.FC<LoginStoreProps> = ({ onBack, onLoginSuccess }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [storeName, setStoreName] = useState('');
+    const [cnpj, setCnpj] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +31,8 @@ const LoginStore: React.FC<LoginStoreProps> = ({ onBack, onLoginSuccess }) => {
                     options: {
                         data: {
                             role: 'store',
-                            full_name: storeName
+                            full_name: storeName,
+                            cnpj: cnpj
                         }
                     }
                 });
@@ -74,17 +76,30 @@ const LoginStore: React.FC<LoginStoreProps> = ({ onBack, onLoginSuccess }) => {
 
                 <form onSubmit={handleAuth} className="space-y-4">
                     {isSignUp && (
-                        <div className="relative group">
-                            <input
-                                required
-                                type="text"
-                                placeholder="Nome da Loja"
-                                className="w-full pl-14 pr-6 py-5 bg-gray-800 border-none rounded-[2rem] text-sm font-bold focus:ring-4 focus:ring-red-500/20 shadow-inner group-hover:bg-gray-700 transition-all text-white placeholder-gray-500"
-                                value={storeName}
-                                onChange={e => setStoreName(e.target.value)}
-                            />
-                            <Store className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-red-500 transition-colors" size={20} />
-                        </div>
+                        <>
+                            <div className="relative group">
+                                <input
+                                    required
+                                    type="text"
+                                    placeholder="Nome da Loja"
+                                    className="w-full pl-14 pr-6 py-5 bg-gray-800 border-none rounded-[2rem] text-sm font-bold focus:ring-4 focus:ring-red-500/20 shadow-inner group-hover:bg-gray-700 transition-all text-white placeholder-gray-500"
+                                    value={storeName}
+                                    onChange={e => setStoreName(e.target.value)}
+                                />
+                                <Store className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-red-500 transition-colors" size={20} />
+                            </div>
+                            <div className="relative group">
+                                <input
+                                    required
+                                    type="text"
+                                    placeholder="CNPJ do Estabelecimento"
+                                    className="w-full pl-14 pr-6 py-5 bg-gray-800 border-none rounded-[2rem] text-sm font-bold focus:ring-4 focus:ring-red-500/20 shadow-inner group-hover:bg-gray-700 transition-all text-white placeholder-gray-500"
+                                    value={cnpj}
+                                    onChange={e => setCnpj(e.target.value)}
+                                />
+                                <Building2 className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-red-500 transition-colors" size={20} />
+                            </div>
+                        </>
                     )}
 
                     <div className="relative group">

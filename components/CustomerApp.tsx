@@ -29,8 +29,9 @@ import {
   LocateFixed,
   Zap
 } from 'lucide-react';
-import { MOCK_STORES, MOCK_PRODUCTS, CATEGORIES } from '../constants';
+import { MOCK_STORES, CATEGORIES } from '../constants';
 import { getSmartMenuSuggestions } from '../services/gemini';
+import { getAllProducts } from '../services/products';
 import { Order, Store, Product, Address, Message } from '../types';
 import NavButton from './shared/NavButton';
 import AppHeader from './shared/AppHeader';
@@ -60,6 +61,17 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [dbProducts, setDbProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const products = await getAllProducts();
+      setDbProducts(products);
+      setLoadingProducts(false);
+    };
+    fetchProducts();
+  }, []);
 
   // Address State
   const [addresses, setAddresses] = useState<Address[]>([
@@ -397,7 +409,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
 
   const StoreView = () => {
     if (!selectedStore) return null;
-    const storeMenu = MOCK_PRODUCTS;
+    const storeMenu = dbProducts; // In the future, we filter by store_id if needed, for now we show all from DB to test
 
     return (
       <main className="animate-in slide-in-from-right-10 duration-500 pb-20">
@@ -622,7 +634,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
         <Filter size={20} className="text-gray-400" />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        {MOCK_PRODUCTS.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(product => (
+        {dbProducts.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(product => (
           <div key={product.id} className="bg-white border-2 border-gray-50 rounded-[2rem] p-4 flex flex-col shadow-sm">
             <div className="relative mb-3 overflow-hidden rounded-2xl h-32">
               <img src={product.image} alt={product.name} className="w-full h-full object-cover" />

@@ -16,12 +16,14 @@ import {
   Zap
 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { MOCK_PRODUCTS, CATEGORIES } from '../constants';
+import { CATEGORIES } from '../constants';
 import { Order, Product, Message } from '../types';
 import NavButton from './shared/NavButton';
 import AppHeader from './shared/AppHeader';
 import Modal from './shared/Modal';
 import ChatInterface from './shared/ChatInterface';
+import { supabase } from '../services/supabase';
+import { getProductsByStore, addProduct, deleteProduct } from '../services/products';
 
 interface AdminPanelProps {
   onSwitchMode: () => void;
@@ -46,7 +48,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showNewProductModal, setShowNewProductModal] = useState(false);
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
-  const [localProducts, setLocalProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [localProducts, setLocalProducts] = useState<Product[]>([]);
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  useEffect(() => {
+    const initPanel = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setStoreId(user.id);
+        const products = await getProductsByStore(user.id);
+        setLocalProducts(products);
+      }
+      setLoadingProducts(false);
+    };
+
+    initPanel();
+  }, []);
 
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -56,16 +74,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
     image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80'
   });
 
-  const handleRemoveProduct = (id: string) => {
+  const handleRemoveProduct = async (id: string) => {
     if (confirm('Deseja realmente excluir este item do cardápio permanentemente?')) {
-      setLocalProducts(prev => prev.filter(p => p.id !== id));
+      const success = await deleteProduct(id);
+      if (success) {
+        setLocalProducts(prev => prev.filter(p => p.id !== id));
+      } else {
+        alert('Erro ao deletar produto. Tente novamente.');
+      }
     }
   };
 
-  const handleAddProduct = (e: React.FormEvent) => {
+  const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const productToAdd: Product = {
-      id: `p${Date.now()}`,
+    if (!storeId) return;
+
+    const productData: Omit<Product, 'id'> = {
       name: newProduct.name,
       description: newProduct.description,
       price: parseFloat(newProduct.price),
@@ -73,15 +97,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
       image: newProduct.image
     };
 
-    setLocalProducts(prev => [productToAdd, ...prev]);
-    setShowNewProductModal(false);
-    setNewProduct({
-      name: '',
-      description: '',
-      price: '',
-      category: CATEGORIES[1].name,
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80'
-    });
+    const addedProduct = await addProduct(productData, storeId);
+
+    if (addedProduct) {
+      setLocalProducts(prev => [addedProduct, ...prev]);
+      setShowNewProductModal(false);
+      setNewProduct({
+        name: '',
+        description: '',
+        price: '',
+        category: CATEGORIES[1].name,
+        image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80'
+      });
+    } else {
+      alert('Erro ao adicionar produto. Tente novamente.');
+    }
   };
 
   const activeOrders = orders.filter(o => ['pending', 'confirmed', 'ready'].includes(o.status));
@@ -323,28 +353,43 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {localProducts.map(product => (
-                      <tr key={product.id} className="hover:bg-gray-50 transition-colors group animate-in slide-in-from-left-4">
-                        <td className="px-6 lg:px-8 py-5">
-                          <img src={product.image} className="w-12 h-12 rounded-xl object-cover shadow-sm group-hover:scale-110 transition-transform" alt="" />
-                        </td>
-                        <td className="px-6 lg:px-8 py-5">
-                          <div className="font-black text-xs lg:text-sm text-gray-900 italic uppercase truncate max-w-[150px]">{product.name}</div>
-                          <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{product.category}</div>
-                        </td>
-                        <td className="px-6 lg:px-8 py-5">
-                          <div className="text-xs lg:text-sm font-black text-red-600">R${product.price.toFixed(2)}</div>
-                        </td>
-                        <td className="px-6 lg:px-8 py-5 text-right">
-                          <button
-                            onClick={() => handleRemoveProduct(product.id)}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                          >
-                            <Trash2 size={12} /> Remover Item
-                          </button>
+                    {loadingProducts ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-600 mx-auto mb-2"></div>
+                          <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Carregando cardápio...</p>
                         </td>
                       </tr>
-                    ))}
+                    ) : localProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center">
+                          <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Seu cardápio está vazio</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      localProducts.map(product => (
+                        <tr key={product.id} className="hover:bg-gray-50 transition-colors group animate-in slide-in-from-left-4">
+                          <td className="px-6 lg:px-8 py-5">
+                            <img src={product.image} className="w-12 h-12 rounded-xl object-cover shadow-sm group-hover:scale-110 transition-transform" alt="" />
+                          </td>
+                          <td className="px-6 lg:px-8 py-5">
+                            <div className="font-black text-xs lg:text-sm text-gray-900 italic uppercase truncate max-w-[150px]">{product.name}</div>
+                            <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{product.category}</div>
+                          </td>
+                          <td className="px-6 lg:px-8 py-5">
+                            <div className="text-xs lg:text-sm font-black text-red-600">R${product.price.toFixed(2)}</div>
+                          </td>
+                          <td className="px-6 lg:px-8 py-5 text-right">
+                            <button
+                              onClick={() => handleRemoveProduct(product.id)}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                            >
+                              <Trash2 size={12} /> Remover Item
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

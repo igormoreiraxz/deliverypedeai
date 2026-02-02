@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { AppView } from '../../types';
-import { Mail, Lock, User, ArrowRight, ChevronLeft, Loader2, Zap, Navigation } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, ChevronLeft, Loader2, Zap, Navigation, IdCard } from 'lucide-react';
 
 interface LoginCourierProps {
     onBack: () => void;
@@ -14,6 +14,7 @@ const LoginCourier: React.FC<LoginCourierProps> = ({ onBack, onLoginSuccess }) =
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
+    const [cnh, setCnh] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +31,8 @@ const LoginCourier: React.FC<LoginCourierProps> = ({ onBack, onLoginSuccess }) =
                     options: {
                         data: {
                             role: 'courier',
-                            full_name: fullName
+                            full_name: fullName,
+                            cnh: cnh
                         }
                     }
                 });
@@ -74,17 +76,30 @@ const LoginCourier: React.FC<LoginCourierProps> = ({ onBack, onLoginSuccess }) =
 
                 <form onSubmit={handleAuth} className="space-y-4">
                     {isSignUp && (
-                        <div className="relative group">
-                            <input
-                                required
-                                type="text"
-                                placeholder="Seu Nome Completo"
-                                className="w-full pl-14 pr-6 py-5 bg-white border-2 border-transparent rounded-[2rem] text-sm font-bold focus:border-red-600/20 focus:ring-4 focus:ring-red-600/5 shadow-sm group-hover:bg-white transition-all"
-                                value={fullName}
-                                onChange={e => setFullName(e.target.value)}
-                            />
-                            <User className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-red-600 transition-colors" size={20} />
-                        </div>
+                        <>
+                            <div className="relative group">
+                                <input
+                                    required
+                                    type="text"
+                                    placeholder="Seu Nome Completo"
+                                    className="w-full pl-14 pr-6 py-5 bg-white border-2 border-transparent rounded-[2rem] text-sm font-bold focus:border-red-600/20 focus:ring-4 focus:ring-red-600/5 shadow-sm group-hover:bg-white transition-all"
+                                    value={fullName}
+                                    onChange={e => setFullName(e.target.value)}
+                                />
+                                <User className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-red-600 transition-colors" size={20} />
+                            </div>
+                            <div className="relative group">
+                                <input
+                                    required
+                                    type="text"
+                                    placeholder="CNH (Número do registro)"
+                                    className="w-full pl-14 pr-6 py-5 bg-white border-2 border-transparent rounded-[2rem] text-sm font-bold focus:border-red-600/20 focus:ring-4 focus:ring-red-600/5 shadow-sm group-hover:bg-white transition-all"
+                                    value={cnh}
+                                    onChange={e => setCnh(e.target.value)}
+                                />
+                                <IdCard className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-red-600 transition-colors" size={20} />
+                            </div>
+                        </>
                     )}
 
                     <div className="relative group">
