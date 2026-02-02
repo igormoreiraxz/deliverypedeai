@@ -30,3 +30,16 @@ export const getCurrentProfile = async (): Promise<Profile | null> => {
 
     return data;
 };
+
+export const updateStoreProfile = async (id: string, updates: Partial<Profile>): Promise<boolean> => {
+    const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error updating profile:', error);
+        return false;
+    }
+    return true;
+};
