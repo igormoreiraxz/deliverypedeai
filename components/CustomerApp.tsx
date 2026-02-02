@@ -711,7 +711,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
     );
   }
 
-  if (currentView === 'checkout') {
+  const CheckoutView = () => {
     return (
       <div className="max-w-md mx-auto bg-white min-h-screen pb-32 animate-in slide-in-from-right-10 duration-300">
         <header className="p-4 border-b flex items-center bg-white sticky top-0 z-10">
@@ -796,7 +796,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
         </div>
       </div>
     );
-  }
+  };
 
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen shadow-lg pb-24">
@@ -849,6 +849,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       {currentView === 'store' && <StoreView />}
       {currentView === 'order-detail' && <OrderDetailView />}
       {currentView === 'support' && <SupportView />}
+      {currentView === 'checkout' && <CheckoutView />}
 
       <Modal
         isOpen={showAddressModal}
