@@ -2,6 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { getCurrentProfile, Profile } from '../services/profiles';
 import {
+  getAvailableDeliveries,
+  claimDelivery,
+  updateCourierLocation,
+  updateCourierStatus,
+  subscribeToAvailableDeliveries,
+  getCourierActiveDelivery,
+  getCourierDeliveryHistory
+} from '../services/couriers';
+import {
   MapPin,
   Navigation,
   DollarSign,
@@ -39,6 +48,10 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
   const [isOnline, setIsOnline] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [availableOrders, setAvailableOrders] = useState<Order[]>([]);
+  const [myCurrentOrder, setMyCurrentOrder] = useState<Order | null>(null);
+  const [myHistory, setMyHistory] = useState<Order[]>([]);
+  const [isClaimingOrder, setIsClaimingOrder] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -50,22 +63,112 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
 
   const courierId = profile?.id || 'courier-loading';
 
-  // Couriers only see orders that are READY for pickup
-  const availableOrders = orders.filter(o => o.status === 'ready');
-  const myCurrentOrder = orders.find(o => o.status === 'shipping' && o.courierId === courierId);
-  const myHistory = orders.filter(o => o.status === 'delivered' && o.courierId === courierId);
+  // Fetch initial data
+  useEffect(() => {
+    if (!courierId || courierId === 'courier-loading') return;
 
+    const fetchData = async () => {
+      const [available, active, history] = await Promise.all([
+        getAvailableDeliveries(),
+        getCourierActiveDelivery(courierId),
+        getCourierDeliveryHistory(courierId)
+      ]);
+      setAvailableOrders(available);
+      setMyCurrentOrder(active);
+      setMyHistory(history);
+    };
+
+    fetchData();
+  }, [courierId]);
+
+  // Subscribe to available deliveries in realtime
+  useEffect(() => {
+    if (!isOnline || courierId === 'courier-loading') return;
+
+    const subscription = subscribeToAvailableDeliveries((order, eventType) => {
+      if (eventType === 'INSERT' || eventType === 'UPDATE') {
+        setAvailableOrders(prev => {
+          // Check if order already exists
+          const exists = prev.some(o => o.id === order.id);
+          if (exists) return prev;
+          return [order, ...prev];
+        });
+        // Show notification for new orders
+        if (!myCurrentOrder) {
+          setShowNotification(true);
+          setTimeout(() => setShowNotification(false), 5000);
+        }
+      } else if (eventType === 'DELETE') {
+        // Remove order from available list (claimed by someone else)
+        setAvailableOrders(prev => prev.filter(o => o.id !== order.id));
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isOnline, courierId, myCurrentOrder]);
+
+  // Handle online/offline toggle with location tracking
+  useEffect(() => {
+    if (courierId === 'courier-loading') return;
+
+    updateCourierStatus(courierId, isOnline);
+
+    if (isOnline && navigator.geolocation) {
+      // Update location every 30 seconds when online
+      const updateLocation = () => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            updateCourierLocation(
+              courierId,
+              position.coords.latitude,
+              position.coords.longitude
+            );
+          },
+          (error) => console.error('Error getting location:', error)
+        );
+      };
+
+      updateLocation(); // Initial update
+      const interval = setInterval(updateLocation, 30000); // Every 30s
+
+      return () => clearInterval(interval);
+    }
+  }, [isOnline, courierId]);
+
+  // Handle claiming a delivery
+  const handleClaimDelivery = async (orderId: string) => {
+    if (isClaimingOrder || courierId === 'courier-loading') return;
+
+    setIsClaimingOrder(true);
+
+    // Optimistic update
+    const orderToClaim = availableOrders.find(o => o.id === orderId);
+    if (!orderToClaim) {
+      setIsClaimingOrder(false);
+      return;
+    }
+
+    setAvailableOrders(prev => prev.filter(o => o.id !== orderId));
+    setMyCurrentOrder({ ...orderToClaim, courierId, status: 'shipping' });
+
+    // Attempt to claim
+    const success = await claimDelivery(orderId, courierId);
+
+    if (!success) {
+      // Rollback optimistic update
+      alert('Essa entrega já foi aceita por outro entregador!');
+      setAvailableOrders(prev => [orderToClaim, ...prev]);
+      setMyCurrentOrder(null);
+    }
+
+    setIsClaimingOrder(false);
+  };
+
+  // Helper functions
   const calculateCommission = (total: number) => total * 0.15;
   const totalGains = myHistory.reduce((acc, curr) => acc + calculateCommission(curr.total), 0);
-
-  // Simular notificação quando novos pedidos aparecem e está online
-  useEffect(() => {
-    if (isOnline && availableOrders.length > 0 && !myCurrentOrder) {
-      setShowNotification(true);
-      const timer = setTimeout(() => setShowNotification(false), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [availableOrders.length, isOnline, myCurrentOrder]);
 
   return (
     <div className="max-w-md mx-auto bg-gray-50 min-h-screen shadow-lg pb-24 relative overflow-hidden">
