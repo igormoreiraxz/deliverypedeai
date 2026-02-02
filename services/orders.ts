@@ -56,7 +56,7 @@ export const getOrdersByCustomer = async (customerId: string): Promise<Order[]> 
     }));
 };
 
-export const getOrderMessages = async (orderId: string): Promise<Message[]> => {
+export const getOrderMessages = async (orderId: string, customerId: string): Promise<Message[]> => {
     const { data, error } = await supabase
         .from('order_messages')
         .select('*')
@@ -73,7 +73,7 @@ export const getOrderMessages = async (orderId: string): Promise<Message[]> => {
         order_id: d.order_id,
         sender_id: d.sender_id,
         text: d.text,
-        sender: d.sender_id === d.customer_id ? 'user' : 'store', // Basic logic, might need refinement if auth user is known
+        sender: d.sender_id === customerId ? 'user' : 'store',
         timestamp: new Date(d.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         created_at: d.created_at
     }));

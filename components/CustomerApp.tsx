@@ -130,9 +130,9 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   }, [messages, viewingOrder]);
 
   useEffect(() => {
-    if (viewingOrder) {
+    if (viewingOrder && currentUser) {
       const fetchMessages = async () => {
-        const msgs = await getOrderMessages(viewingOrder.id);
+        const msgs = await getOrderMessages(viewingOrder.id, currentUser.id);
         setOrderMessages(msgs);
       };
       fetchMessages();
@@ -145,7 +145,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
         subscription.unsubscribe();
       };
     }
-  }, [viewingOrder]);
+  }, [viewingOrder, currentUser]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -622,7 +622,6 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
         </header>
 
         <div className="p-6 space-y-8">
-          {/* Status Tracker */}
           <section className="bg-gray-50 p-6 rounded-[2.5rem] border border-gray-100">
             <h2 className={`font-black text-xl mb-4 ${currentStatus.color}`}>{currentStatus.label}</h2>
             <div className="flex gap-2">
@@ -634,14 +633,6 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                 />
               ))}
             </div>
-            {canChat && (
-              <button
-                onClick={startOrderChat}
-                className="mt-6 w-full py-4 bg-white text-gray-900 border-2 border-gray-100 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50"
-              >
-                <MessageCircle size={18} className="text-red-600" /> Conversar com a Loja
-              </button>
-            )}
           </section>
 
           {/* Resumo */}
@@ -665,11 +656,20 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             </div>
           </section>
 
+          {canChat && (
+            <button
+              onClick={startOrderChat}
+              className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all"
+            >
+              Conversar com o Estabelecimento <MessageCircle size={18} />
+            </button>
+          )}
+
           <button
             onClick={startHelpChat}
-            className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all"
+            className="w-full py-4 bg-white text-gray-400 border-2 border-gray-100 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
           >
-            Suporte PedeAí <MessageCircle size={18} />
+            Suporte Staff PedeAí <Info size={16} />
           </button>
         </div>
 
