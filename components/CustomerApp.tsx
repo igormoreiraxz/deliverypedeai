@@ -201,17 +201,29 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       async (position) => {
         try {
           // Reverse geocoding using Nominatim (free)
+          // Adding User-Agent as required by Nominatim Policy
           const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&zoom=18&addressdetails=1`, {
-            headers: { 'Accept-Language': 'pt-BR' }
+            headers: {
+              'Accept-Language': 'pt-BR',
+              'User-Agent': 'PedeAi-Delivery-App-v1.0'
+            }
           });
           const data = await response.json();
 
-          const street = data.address?.road || data.address?.pedestrian || '';
+          const street = data.address?.road || data.address?.pedestrian || data.address?.suburb || '';
           const number = data.address?.house_number || '';
-          const suburb = data.address?.suburb || data.address?.neighbourhood || '';
-          const city = data.address?.city || data.address?.town || '';
+          const suburb = data.address?.suburb || data.address?.neighbourhood || data.address?.city_district || '';
+          const city = data.address?.city || data.address?.town || data.address?.village || '';
 
-          const readableAddress = street ? `${street}${number ? ', ' + number : ''}${suburb ? ' - ' + suburb : ''}${city ? ' (' + city + ')' : ''}` : `Latitude: ${position.coords.latitude.toFixed(4)}, Longitude: ${position.coords.longitude.toFixed(4)}`;
+          let readableAddress = '';
+          if (street) {
+            readableAddress = street;
+            if (number) readableAddress += `, ${number}`;
+            if (suburb) readableAddress += ` - ${suburb}`;
+            if (city) readableAddress += ` (${city})`;
+          } else {
+            readableAddress = data.display_name?.split(',')[0] || `Lat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}`;
+          }
 
           const locationAddr: Address = {
             id: 'current',
@@ -996,7 +1008,9 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                   className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-600 bg-gray-50 border border-gray-100 px-4 py-2 rounded-2xl hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all shadow-sm group"
                 >
                   <MapPin size={14} className="mr-2 text-red-500 group-hover:animate-bounce" />
-                  <span className="max-w-[120px] truncate">{activeAddress.label}</span>
+                  <span className="max-w-[150px] truncate">
+                    {activeAddress.id === 'current' ? activeAddress.details : activeAddress.label}
+                  </span>
                   <ChevronLeft size={14} className="ml-1 -rotate-90 opacity-40" />
                 </button>
                 <button onClick={onSwitchMode} className="p-2.5 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-gray-100 transition-all shadow-sm">
