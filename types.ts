@@ -27,15 +27,18 @@ export interface Product {
 
 export interface Message {
   id: string;
-  orderId: string;
+  order_id: string;
+  sender_id: string;
   text: string;
   sender: 'user' | 'store';
   timestamp: string;
+  created_at?: string;
 }
 
 export interface Order {
   id: string;
   customerId: string;
+  store_id: string;
   items: Array<{ product: Product; quantity: number }>;
   status: 'pending' | 'confirmed' | 'ready' | 'shipping' | 'delivered' | 'cancelled';
   total: number;

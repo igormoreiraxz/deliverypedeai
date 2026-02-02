@@ -36,6 +36,7 @@ import { getAllProducts, getProductsByStore } from '../services/products';
 import { getRegisteredStores } from '../services/stores';
 import { getSupportMessages, sendSupportMessage, subscribeToSupportMessages, SupportMessage as SupportMessageType } from '../services/support';
 import { Order, Store, Product, Address, Message } from '../types';
+import { createOrder, getOrdersByCustomer, getOrderMessages, sendOrderMessage, subscribeToOrderMessages } from '../services/orders';
 import NavButton from './shared/NavButton';
 import AppHeader from './shared/AppHeader';
 import Modal from './shared/Modal';
@@ -70,21 +71,25 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [supportMessages, setSupportMessages] = useState<SupportMessageType[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [dbOrders, setDbOrders] = useState<Order[]>([]);
+  const [orderMessages, setOrderMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
 
-      const [products, stores, messages] = await Promise.all([
+      const [products, stores, messages, userOrders] = await Promise.all([
         getAllProducts(),
         getRegisteredStores(),
-        user ? getSupportMessages(user.id) : Promise.resolve([])
+        user ? getSupportMessages(user.id) : Promise.resolve([]),
+        user ? getOrdersByCustomer(user.id) : Promise.resolve([])
       ]);
 
       setDbProducts(products);
       setDbStores(stores);
       setSupportMessages(messages);
+      setDbOrders(userOrders);
       setLoadingInitial(false);
 
       if (user) {
@@ -125,10 +130,28 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   }, [messages, viewingOrder]);
 
   useEffect(() => {
+    if (viewingOrder) {
+      const fetchMessages = async () => {
+        const msgs = await getOrderMessages(viewingOrder.id);
+        setOrderMessages(msgs);
+      };
+      fetchMessages();
+
+      const subscription = subscribeToOrderMessages(viewingOrder.id, (msg) => {
+        setOrderMessages(prev => [...prev, msg]);
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [viewingOrder]);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [currentOrderMessages]);
+  }, [orderMessages, supportMessages]);
 
   const detectLocation = () => {
     if (!navigator.geolocation) {
@@ -171,30 +194,40 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
     setCart(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !viewingOrder) return;
-    onSendMessage(viewingOrder.id, newMessage, 'user');
-    setNewMessage('');
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !viewingOrder || !currentUser) return;
+
+    const sent = await sendOrderMessage(viewingOrder.id, currentUser.id, newMessage);
+    if (sent) {
+      setOrderMessages(prev => [...prev, sent]);
+      setNewMessage('');
+    }
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
+    if (!currentUser || cart.length === 0 || !selectedStore) return;
     setIsProcessing(true);
-    const newOrder: Order = {
-      id: `PA-${Math.floor(Math.random() * 90000) + 10000}`,
-      customerId: 'user-123',
+
+    const orderData: Omit<Order, 'id' | 'createdAt'> = {
+      customerId: currentUser.id,
+      store_id: selectedStore.id,
       items: cart.map(p => ({ product: p, quantity: 1 })),
       status: 'pending',
       total: cart.reduce((acc, curr) => acc + curr.price, 0),
-      createdAt: new Date().toISOString(),
       address: `${activeAddress.details}${activeAddress.complement ? ', ' + activeAddress.complement : ''}`
     };
 
-    setTimeout(() => {
-      onPlaceOrder(newOrder);
+    const newOrder = await createOrder(orderData);
+
+    if (newOrder) {
+      setDbOrders(prev => [newOrder, ...prev]);
       setIsProcessing(false);
       setCurrentView('success');
       setCart([]);
-    }, 1500);
+    } else {
+      alert('Erro ao processar pedido. Tente novamente.');
+      setIsProcessing(false);
+    }
   };
 
   const addNewAddress = (e: React.FormEvent) => {
@@ -236,6 +269,11 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const startHelpChat = () => {
     setCurrentView('support');
     window.scrollTo(0, 0);
+  };
+
+  const [showOrderChat, setShowOrderChat] = useState(false);
+  const startOrderChat = () => {
+    setShowOrderChat(true);
   };
 
   const handleSendSupportMessage = async (text: string) => {
@@ -514,10 +552,12 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       cancelled: { label: 'Cancelado', color: 'text-red-500 bg-red-50' }
     };
 
+    const displayOrders = dbOrders.length > 0 ? dbOrders : orders;
+
     return (
       <main className="p-4 space-y-6 animate-in fade-in duration-300">
         <h2 className="text-2xl font-black mb-6">Meus Pedidos</h2>
-        {orders.length === 0 ? (
+        {displayOrders.length === 0 ? (
           <div className="text-center py-20">
             <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
               <Package size={32} className="text-gray-300" />
@@ -526,7 +566,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map(order => (
+            {displayOrders.map(order => (
               <div key={order.id} className="bg-white p-6 rounded-[2rem] border-2 border-gray-50 shadow-sm">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -596,7 +636,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             </div>
             {canChat && (
               <button
-                onClick={startHelpChat}
+                onClick={startOrderChat}
                 className="mt-6 w-full py-4 bg-white text-gray-900 border-2 border-gray-100 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50"
               >
                 <MessageCircle size={18} className="text-red-600" /> Conversar com a Loja
@@ -632,6 +672,22 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             Suporte PedeAí <MessageCircle size={18} />
           </button>
         </div>
+
+        <Modal
+          isOpen={showOrderChat}
+          onClose={() => setShowOrderChat(false)}
+          title="Chat com a Loja"
+          subtitle={`Pedido ${viewingOrder.id}`}
+        >
+          <div className="h-[500px] flex flex-col p-4">
+            <ChatInterface
+              messages={orderMessages}
+              onSendMessage={handleSendMessage}
+              senderRole="user"
+              placeholder="Digite sua mensagem para o estabelecimento..."
+            />
+          </div>
+        </Modal>
       </main>
     );
   };
