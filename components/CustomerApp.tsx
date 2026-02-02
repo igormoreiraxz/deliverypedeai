@@ -27,7 +27,8 @@ import {
   Home,
   Briefcase,
   LocateFixed,
-  Zap
+  Zap,
+  Trash2
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { getSmartMenuSuggestions } from '../services/gemini';
