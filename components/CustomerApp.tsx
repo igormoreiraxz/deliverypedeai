@@ -130,11 +130,8 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   }, []);
 
   // Address State
-  const [addresses, setAddresses] = useState<Address[]>([
-    { id: '1', label: 'Casa', details: 'Av. Paulista, 1578 - Bela Vista', complement: 'Apto 42', type: 'home' },
-    { id: '2', label: 'Trabalho', details: 'Rua Amauri, 255 - Itaim Bibi', complement: '8º Andar', type: 'work' },
-  ]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>('1');
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
 
