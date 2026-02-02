@@ -789,7 +789,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
           </section>
         </main>
 
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md p-6 bg-white border-t border-gray-100 z-20 shadow-2xl rounded-t-[2.5rem]">
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md p-6 bg-white border-t border-gray-100 z-40 shadow-2xl rounded-t-[2.5rem]">
           <button onClick={handlePlaceOrder} disabled={isProcessing} className={`w-full py-5 rounded-[2rem] font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-red-100 ${isProcessing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]'}`}>
             {isProcessing ? <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" /> : <>Finalizar Pedido <ArrowRight size={20} /></>}
           </button>
@@ -978,12 +978,14 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-4 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] rounded-t-[2.5rem]">
-        <NavButton icon={<ShoppingBag />} label="Explorar" active={currentView === 'catalog' || currentView === 'store'} onClick={() => setCurrentView('catalog')} />
-        <NavButton icon={<Search />} label="Buscar" active={currentView === 'search'} onClick={() => setCurrentView('search')} />
-        <NavButton icon={<Clock />} label="Pedidos" active={currentView === 'orders'} onClick={() => setCurrentView('orders')} />
-        <NavButton icon={<MessageCircle />} label="Suporte" active={currentView === 'support'} onClick={() => setCurrentView('support')} />
-      </nav>
+      {!['checkout', 'order-detail'].includes(currentView) && (
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-4 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] rounded-t-[2.5rem]">
+          <NavButton icon={<ShoppingBag />} label="Explorar" active={currentView === 'catalog' || currentView === 'store'} onClick={() => setCurrentView('catalog')} />
+          <NavButton icon={<Search />} label="Buscar" active={currentView === 'search'} onClick={() => setCurrentView('search')} />
+          <NavButton icon={<Clock />} label="Pedidos" active={currentView === 'orders'} onClick={() => setCurrentView('orders')} />
+          <NavButton icon={<MessageCircle />} label="Suporte" active={currentView === 'support'} onClick={() => setCurrentView('support')} />
+        </nav>
+      )}
     </div>
   );
 };
