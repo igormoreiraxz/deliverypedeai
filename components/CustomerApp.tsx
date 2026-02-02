@@ -33,6 +33,7 @@ import { CATEGORIES } from '../constants';
 import { getSmartMenuSuggestions } from '../services/gemini';
 import { getAllProducts, getProductsByStore } from '../services/products';
 import { getRegisteredStores } from '../services/stores';
+import { getSupportMessages, sendSupportMessage, subscribeToSupportMessages, SupportMessage as SupportMessageType } from '../services/support';
 import { Order, Store, Product, Address, Message } from '../types';
 import NavButton from './shared/NavButton';
 import AppHeader from './shared/AppHeader';
@@ -65,16 +66,33 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [dbProducts, setDbProducts] = useState<Product[]>([]);
   const [dbStores, setDbStores] = useState<Store[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
+  const [supportMessages, setSupportMessages] = useState<SupportMessageType[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const initData = async () => {
-      const [products, stores] = await Promise.all([
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+
+      const [products, stores, messages] = await Promise.all([
         getAllProducts(),
-        getRegisteredStores()
+        getRegisteredStores(),
+        user ? getSupportMessages(user.id) : Promise.resolve([])
       ]);
+
       setDbProducts(products);
       setDbStores(stores);
+      setSupportMessages(messages);
       setLoadingInitial(false);
+
+      if (user) {
+        const subscription = subscribeToSupportMessages(user.id, (msg) => {
+          setSupportMessages(prev => [...prev.filter(m => m.id !== msg.id), msg]);
+        });
+        return () => {
+          subscription.unsubscribe();
+        };
+      }
     };
     initData();
   }, []);
@@ -216,6 +234,14 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const startHelpChat = () => {
     setCurrentView('support');
     window.scrollTo(0, 0);
+  };
+
+  const handleSendSupportMessage = async (text: string) => {
+    if (!currentUser || !text.trim()) return;
+    const sent = await sendSupportMessage(currentUser.id, text, 'user');
+    if (sent) {
+      setSupportMessages(prev => [...prev, sent]);
+    }
   };
 
   const total = cart.reduce((acc, curr) => acc + curr.price, 0);
@@ -609,26 +635,35 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   };
 
   const SupportView = () => {
-    const chatStore = viewingOrder
-      ? dbStores.find(s => s.id === (viewingOrder as any).storeId) || dbStores[0]
-      : dbStores[0];
-
     return (
       <main className="flex flex-col h-screen bg-white animate-in slide-in-from-bottom-10 duration-500 fixed inset-0 z-50">
         <AppHeader
-          title={chatStore.name}
-          subtitle="Loja Aberta"
+          title="Suporte PedeAí"
+          subtitle="Equipe Staff Online"
           showLogo={false}
-          rightElement={<button className="p-2 text-gray-400"><Phone size={20} /></button>}
-          onLogoClick={() => setCurrentView('order-detail')}
+          rightElement={<button className="p-2 text-gray-400" onClick={() => setCurrentView('catalog')}><X size={20} /></button>}
+          onLogoClick={() => setCurrentView('catalog')}
         />
 
-        <ChatInterface
-          messages={currentOrderMessages}
-          onSendMessage={(text) => viewingOrder && onSendMessage(viewingOrder.id, text, 'user')}
-          senderRole="user"
-          placeholder="Escreva para a loja..."
-        />
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+          <div className="bg-red-50 p-6 rounded-[2.5rem] border border-red-100 mb-4 animate-in fade-in zoom-in-95">
+            <h3 className="font-black italic text-red-600 uppercase text-xs mb-1">Cuidado com golpes</h3>
+            <p className="text-[10px] text-red-400 font-bold uppercase tracking-tight">O Staff do PedeAí nunca solicita sua senha ou dados de pagamento via chat.</p>
+          </div>
+
+          <ChatInterface
+            messages={supportMessages.map(m => ({
+              id: m.id,
+              orderId: 'general',
+              text: m.text,
+              sender: m.sender_type === 'user' ? 'user' : 'store', // Mapping sender to existing ChatInterface types
+              timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }))}
+            onSendMessage={handleSendSupportMessage}
+            senderRole="user"
+            placeholder="Descreva seu problema para a equipe Staff..."
+          />
+        </div>
       </main>
     );
   };
