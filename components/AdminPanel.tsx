@@ -115,7 +115,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
       fetchMsgs();
 
       const sub = subscribeToOrderMessages(activeChatOrder.id, (msg) => {
-        setOrderMessages(prev => [...prev, msg]);
+        const mappedMsg = {
+          ...msg,
+          sender: msg.sender_id === storeId ? 'store' : 'user'
+        };
+        setOrderMessages(prev => {
+          if (prev.some(m => m.id === mappedMsg.id)) return prev;
+          return [...prev, mappedMsg];
+        });
       });
 
       return () => {
@@ -232,7 +239,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
     if (!activeChatOrder || !storeId || !text.trim()) return;
     const sent = await sendOrderMessage(activeChatOrder.id, storeId, text);
     if (sent) {
-      setOrderMessages(prev => [...prev, sent]);
+      setOrderMessages(prev => [...prev, { ...sent, sender: 'store' }]);
     }
   };
 

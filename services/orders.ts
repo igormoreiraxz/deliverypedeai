@@ -148,7 +148,7 @@ export const sendOrderMessage = async (orderId: string, senderId: string, text: 
         order_id: data.order_id,
         sender_id: data.sender_id,
         text: data.text,
-        sender: 'user', // Assuming this service is used by the customer app
+        sender: 'user', // Temporary, components should override this
         timestamp: new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         created_at: data.created_at
     };
@@ -169,7 +169,7 @@ export const subscribeToOrderMessages = (orderId: string, callback: (message: Me
                 order_id: d.order_id,
                 sender_id: d.sender_id,
                 text: d.text,
-                sender: 'store', // Usually if it's an insert we didn't do, it's the other party
+                sender: 'store', // Temporary, components should override this
                 timestamp: new Date(d.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 created_at: d.created_at
             });

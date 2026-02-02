@@ -138,7 +138,15 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       fetchMessages();
 
       const subscription = subscribeToOrderMessages(viewingOrder.id, (msg) => {
-        setOrderMessages(prev => [...prev, msg]);
+        const mappedMsg = {
+          ...msg,
+          sender: msg.sender_id === currentUser.id ? 'user' : 'store'
+        };
+        setOrderMessages(prev => {
+          // Avoid duplicates if we already added it locally
+          if (prev.some(m => m.id === mappedMsg.id)) return prev;
+          return [...prev, mappedMsg];
+        });
       });
 
       return () => {
@@ -194,13 +202,12 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
     setCart(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !viewingOrder || !currentUser) return;
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim() || !viewingOrder || !currentUser) return;
 
-    const sent = await sendOrderMessage(viewingOrder.id, currentUser.id, newMessage);
+    const sent = await sendOrderMessage(viewingOrder.id, currentUser.id, text);
     if (sent) {
-      setOrderMessages(prev => [...prev, sent]);
-      setNewMessage('');
+      setOrderMessages(prev => [...prev, { ...sent, sender: 'user' }]);
     }
   };
 
