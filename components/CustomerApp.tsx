@@ -39,6 +39,7 @@ import NavButton from './shared/NavButton';
 import AppHeader from './shared/AppHeader';
 import Modal from './shared/Modal';
 import ChatInterface from './shared/ChatInterface';
+import { supabase } from '../services/supabase';
 
 interface CustomerAppProps {
   onSwitchMode: () => void;
