@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { getCurrentProfile, updateStoreProfile, Profile } from '../services/profiles';
 import {
   LayoutDashboard,
@@ -18,7 +18,8 @@ import {
   Image as ImageIcon,
   Loader2,
   Info,
-  Settings
+  Settings,
+  DollarSign
 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { CATEGORIES } from '../constants';
@@ -375,12 +376,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
         <div className="p-4 lg:p-8 max-w-6xl mx-auto space-y-6 lg:space-y-8">
           {activeTab === 'dashboard' && (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-                <StatCard icon={<ShoppingBag />} label="Total Pedidos" value={dbOrders.length.toString()} />
-                <StatCard icon={<Clock />} label="Ativos" value={dbOrders.filter(o => ['pending', 'confirmed', 'ready'].includes(o.status)).length.toString()} />
-                <StatCard icon={<CheckCircle />} label="Concluídos" value={dbOrders.filter(o => o.status === 'delivered').length.toString()} />
-                <StatCard icon={<User />} label="Clientes" value={new Set(dbOrders.map(o => o.customerId)).size.toString()} />
-              </div>
+              {/* Revenue Calculation */}
+              {(() => {
+                const totalRevenue = dbOrders
+                  .filter(o => o.status === 'delivered')
+                  .reduce((sum, order) => sum + order.total, 0);
+
+                return (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+                    <StatCard icon={<DollarSign />} label="Faturamento" value={`R$ ${totalRevenue.toFixed(2)}`} />
+                    <StatCard icon={<ShoppingBag />} label="Total Pedidos" value={dbOrders.length.toString()} />
+                    <StatCard icon={<Clock />} label="Ativos" value={dbOrders.filter(o => ['pending', 'confirmed', 'ready'].includes(o.status)).length.toString()} />
+                    <StatCard icon={<CheckCircle />} label="Concluídos" value={dbOrders.filter(o => o.status === 'delivered').length.toString()} />
+                  </div>
+                );
+              })()}
 
               <div className="bg-white p-5 lg:p-8 rounded-[2.5rem] lg:rounded-[3rem] shadow-sm border-2 border-gray-50">
                 <div className="flex flex-col lg:flex-row justify-between lg:items-center mb-6 lg:mb-8 gap-4">
