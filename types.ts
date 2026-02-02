@@ -17,6 +17,7 @@ export interface Address {
 
 export interface Product {
   id: string;
+  store_id: string;
   name: string;
   description: string;
   price: number;

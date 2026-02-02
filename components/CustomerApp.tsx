@@ -29,9 +29,10 @@ import {
   LocateFixed,
   Zap
 } from 'lucide-react';
-import { MOCK_STORES, CATEGORIES } from '../constants';
+import { CATEGORIES } from '../constants';
 import { getSmartMenuSuggestions } from '../services/gemini';
-import { getAllProducts } from '../services/products';
+import { getAllProducts, getProductsByStore } from '../services/products';
+import { getRegisteredStores } from '../services/stores';
 import { Order, Store, Product, Address, Message } from '../types';
 import NavButton from './shared/NavButton';
 import AppHeader from './shared/AppHeader';
@@ -62,15 +63,20 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [dbProducts, setDbProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [dbStores, setDbStores] = useState<Store[]>([]);
+  const [loadingInitial, setLoadingInitial] = useState(true);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      const products = await getAllProducts();
+    const initData = async () => {
+      const [products, stores] = await Promise.all([
+        getAllProducts(),
+        getRegisteredStores()
+      ]);
       setDbProducts(products);
-      setLoadingProducts(false);
+      setDbStores(stores);
+      setLoadingInitial(false);
     };
-    fetchProducts();
+    initData();
   }, []);
 
   // Address State
@@ -188,12 +194,12 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   };
 
   const filteredStores = useMemo(() => {
-    return MOCK_STORES.filter(store => {
+    return dbStores.filter(store => {
       const matchesCategory = selectedCategory === 'Todos' || store.category === selectedCategory;
       const matchesSearch = store.name.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchTerm]);
+  }, [selectedCategory, searchTerm, dbStores]);
 
   const openStore = (store: Store) => {
     setSelectedStore(store);
@@ -409,7 +415,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
 
   const StoreView = () => {
     if (!selectedStore) return null;
-    const storeMenu = dbProducts; // In the future, we filter by store_id if needed, for now we show all from DB to test
+    const storeMenu = dbProducts.filter(p => (p as any).store_id === selectedStore.id);
 
     return (
       <main className="animate-in slide-in-from-right-10 duration-500 pb-20">
@@ -604,8 +610,8 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
 
   const SupportView = () => {
     const chatStore = viewingOrder
-      ? MOCK_STORES.find(s => s.category === viewingOrder.items[0]?.product.category) || MOCK_STORES[0]
-      : MOCK_STORES[0];
+      ? dbStores.find(s => s.id === (viewingOrder as any).storeId) || dbStores[0]
+      : dbStores[0];
 
     return (
       <main className="flex flex-col h-screen bg-white animate-in slide-in-from-bottom-10 duration-500 fixed inset-0 z-50">
