@@ -36,7 +36,7 @@ import { getAllProducts, getProductsByStore } from '../services/products';
 import { getRegisteredStores } from '../services/stores';
 import { getSupportMessages, sendSupportMessage, subscribeToSupportMessages, SupportMessage as SupportMessageType } from '../services/support';
 import { Order, Store, Product, Address, Message } from '../types';
-import { createOrder, getOrdersByCustomer, getOrderMessages, sendOrderMessage, subscribeToOrderMessages } from '../services/orders';
+import { createOrder, getOrdersByCustomer, getOrderMessages, sendOrderMessage, subscribeToOrderMessages, subscribeToCustomerOrders } from '../services/orders';
 import NavButton from './shared/NavButton';
 import AppHeader from './shared/AppHeader';
 import Modal from './shared/Modal';
@@ -75,6 +75,9 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [orderMessages, setOrderMessages] = useState<Message[]>([]);
 
   useEffect(() => {
+    let supportSub: any;
+    let orderSub: any;
+
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
@@ -93,15 +96,37 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       setLoadingInitial(false);
 
       if (user) {
-        const subscription = subscribeToSupportMessages(user.id, (msg) => {
+        supportSub = subscribeToSupportMessages(user.id, (msg) => {
           setSupportMessages(prev => [...prev.filter(m => m.id !== msg.id), msg]);
         });
-        return () => {
-          subscription.unsubscribe();
-        };
+
+        orderSub = subscribeToCustomerOrders(user.id, (order, eventType) => {
+          setDbOrders(prev => {
+            if (eventType === 'INSERT') {
+              if (prev.some(o => o.id === order.id)) return prev;
+              return [order, ...prev];
+            } else {
+              return prev.map(o => o.id === order.id ? order : o);
+            }
+          });
+
+          // Also update viewingOrder if it's the one that changed
+          setViewingOrder(current => {
+            if (current && current.id === order.id) {
+              return order;
+            }
+            return current;
+          });
+        });
       }
     };
+
     initData();
+
+    return () => {
+      if (supportSub) supportSub.unsubscribe();
+      if (orderSub) orderSub.unsubscribe();
+    };
   }, []);
 
   // Address State

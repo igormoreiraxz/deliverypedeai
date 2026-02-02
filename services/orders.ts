@@ -80,16 +80,17 @@ export const getOrdersByStore = async (storeId: string): Promise<Order[]> => {
     }));
 };
 
-export const subscribeToStoreOrders = (storeId: string, callback: (order: Order) => void) => {
+export const subscribeToStoreOrders = (storeId: string, callback: (order: Order, eventType: 'INSERT' | 'UPDATE') => void) => {
     return supabase
         .channel(`store_orders:${storeId}`)
         .on('postgres_changes', {
-            event: 'INSERT',
+            event: '*', // Listen for all changes (INSERT, UPDATE)
             schema: 'public',
             table: 'orders',
             filter: `store_id=eq.${storeId}`
         }, (payload) => {
-            const d = payload.new;
+            const d = payload.new as any;
+            const eventType = payload.eventType as 'INSERT' | 'UPDATE';
             callback({
                 id: d.id,
                 customerId: d.customer_id,
@@ -99,7 +100,32 @@ export const subscribeToStoreOrders = (storeId: string, callback: (order: Order)
                 items: d.items,
                 createdAt: d.created_at,
                 address: d.address
-            });
+            }, eventType);
+        })
+        .subscribe();
+};
+
+export const subscribeToCustomerOrders = (customerId: string, callback: (order: Order, eventType: 'INSERT' | 'UPDATE') => void) => {
+    return supabase
+        .channel(`customer_orders:${customerId}`)
+        .on('postgres_changes', {
+            event: '*', // Listen for INSERT and UPDATE
+            schema: 'public',
+            table: 'orders',
+            filter: `customer_id=eq.${customerId}`
+        }, (payload) => {
+            const d = payload.new as any;
+            const eventType = payload.eventType as 'INSERT' | 'UPDATE';
+            callback({
+                id: d.id,
+                customerId: d.customer_id,
+                store_id: d.store_id,
+                status: d.status,
+                total: d.total,
+                items: d.items,
+                createdAt: d.created_at,
+                address: d.address
+            }, eventType);
         })
         .subscribe();
 };

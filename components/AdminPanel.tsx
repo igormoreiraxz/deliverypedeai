@@ -96,8 +96,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
           setLocalProducts(products);
           setDbOrders(fetchedOrders);
 
-          orderSub = subscribeToStoreOrders(user.id, (newOrder) => {
-            setDbOrders(prev => [newOrder, ...prev]);
+          orderSub = subscribeToStoreOrders(user.id, (order, eventType) => {
+            setDbOrders(prev => {
+              if (eventType === 'INSERT') {
+                if (prev.some(o => o.id === order.id)) return prev;
+                return [order, ...prev];
+              } else {
+                return prev.map(o => o.id === order.id ? order : o);
+              }
+            });
           });
         }
       } catch (error) {
