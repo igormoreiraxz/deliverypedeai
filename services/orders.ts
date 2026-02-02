@@ -56,6 +56,54 @@ export const getOrdersByCustomer = async (customerId: string): Promise<Order[]> 
     }));
 };
 
+export const getOrdersByStore = async (storeId: string): Promise<Order[]> => {
+    const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching store orders:', error);
+        return [];
+    }
+
+    return data.map(d => ({
+        id: d.id,
+        customerId: d.customer_id,
+        store_id: d.store_id,
+        status: d.status,
+        total: d.total,
+        items: d.items,
+        createdAt: d.created_at,
+        address: d.address
+    }));
+};
+
+export const subscribeToStoreOrders = (storeId: string, callback: (order: Order) => void) => {
+    return supabase
+        .channel(`store_orders:${storeId}`)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'orders',
+            filter: `store_id=eq.${storeId}`
+        }, (payload) => {
+            const d = payload.new;
+            callback({
+                id: d.id,
+                customerId: d.customer_id,
+                store_id: d.store_id,
+                status: d.status,
+                total: d.total,
+                items: d.items,
+                createdAt: d.created_at,
+                address: d.address
+            });
+        })
+        .subscribe();
+};
+
 export const getOrderMessages = async (orderId: string, customerId: string): Promise<Message[]> => {
     const { data, error } = await supabase
         .from('order_messages')

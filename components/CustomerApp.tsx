@@ -607,7 +607,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
     };
 
     const currentStatus = statusMap[viewingOrder.status];
-    const canChat = ['confirmed', 'ready', 'shipping'].includes(viewingOrder.status);
+    const canChat = ['pending', 'confirmed', 'ready', 'shipping', 'delivered'].includes(viewingOrder.status);
 
     return (
       <main className="animate-in slide-in-from-right-10 duration-300 min-h-screen pb-20">
@@ -656,21 +656,29 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
             </div>
           </section>
 
-          {canChat && (
-            <button
-              onClick={startOrderChat}
-              className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all"
-            >
-              Conversar com o Estabelecimento <MessageCircle size={18} />
-            </button>
-          )}
+          <div className="space-y-4 pt-4">
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-4">Dúvidas sobre o pedido?</span>
+              {canChat && (
+                <button
+                  onClick={startOrderChat}
+                  className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all"
+                >
+                  Falar com o Estabelecimento <MessageCircle size={18} />
+                </button>
+              )}
+            </div>
 
-          <button
-            onClick={startHelpChat}
-            className="w-full py-4 bg-white text-gray-400 border-2 border-gray-100 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
-          >
-            Suporte Staff PedeAí <Info size={16} />
-          </button>
+            <div className="flex flex-col gap-2 opacity-60">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 text-center">Problemas com o App ou Pagamento?</span>
+              <button
+                onClick={startHelpChat}
+                className="w-full py-4 bg-white text-gray-400 border-2 border-gray-100 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
+              >
+                Suporte Staff PedeAí <Info size={16} />
+              </button>
+            </div>
+          </div>
         </div>
 
         <Modal

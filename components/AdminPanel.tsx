@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   LayoutDashboard,
@@ -13,7 +12,11 @@ import {
   Archive,
   MessageCircle,
   User,
-  Zap
+  Zap,
+  Camera,
+  Image as ImageIcon,
+  Loader2,
+  Info
 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { CATEGORIES } from '../constants';
@@ -25,7 +28,7 @@ import ChatInterface from './shared/ChatInterface';
 import { supabase } from '../services/supabase';
 import { getProductsByStore, addProduct, deleteProduct } from '../services/products';
 import { uploadProductImage } from '../services/storage';
-import { Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { getOrdersByStore, subscribeToStoreOrders, getOrderMessages, sendOrderMessage, subscribeToOrderMessages } from '../services/orders';
 
 interface AdminPanelProps {
   onSwitchMode: () => void;
@@ -46,13 +49,33 @@ const chartData = [
   { name: 'Dom', sales: 3490 },
 ];
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateOrder, onDeleteOrder, messages, onSendMessage }) => {
+const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
+  <div className="bg-white p-5 lg:p-7 rounded-[2rem] lg:rounded-[2.5rem] shadow-sm border-2 border-gray-50">
+    <div className="text-gray-400 text-[9px] lg:text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2">
+      {icon} {label}
+    </div>
+    <p className="text-2xl lg:text-4xl font-black text-gray-900 italic tracking-tighter">{value}</p>
+  </div>
+);
+
+const statusColors: { [key: string]: string } = {
+  pending: 'bg-red-100 text-red-600',
+  confirmed: 'bg-orange-100 text-orange-600',
+  ready: 'bg-blue-100 text-blue-600',
+  shipping: 'bg-purple-100 text-purple-600',
+  delivered: 'bg-green-100 text-green-600',
+  cancelled: 'bg-gray-100 text-gray-600',
+};
+
+const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showNewProductModal, setShowNewProductModal] = useState(false);
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [dbOrders, setDbOrders] = useState<Order[]>([]);
+  const [orderMessages, setOrderMessages] = useState<Message[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -62,14 +85,44 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setStoreId(user.id);
-        const products = await getProductsByStore(user.id);
+        const [products, fetchedOrders] = await Promise.all([
+          getProductsByStore(user.id),
+          getOrdersByStore(user.id)
+        ]);
         setLocalProducts(products);
+        setDbOrders(fetchedOrders);
+
+        const orderSub = subscribeToStoreOrders(user.id, (newOrder) => {
+          setDbOrders(prev => [newOrder, ...prev]);
+        });
+
+        return () => {
+          orderSub.unsubscribe();
+        };
       }
       setLoadingProducts(false);
     };
 
     initPanel();
   }, []);
+
+  useEffect(() => {
+    if (activeChatOrder && storeId) {
+      const fetchMsgs = async () => {
+        const msgs = await getOrderMessages(activeChatOrder.id, activeChatOrder.customerId);
+        setOrderMessages(msgs);
+      };
+      fetchMsgs();
+
+      const sub = subscribeToOrderMessages(activeChatOrder.id, (msg) => {
+        setOrderMessages(prev => [...prev, msg]);
+      });
+
+      return () => {
+        sub.unsubscribe();
+      };
+    }
+  }, [activeChatOrder, storeId]);
 
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -147,8 +200,41 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
     }
   };
 
-  const activeOrders = orders.filter(o => ['pending', 'confirmed', 'ready'].includes(o.status));
-  const historyOrders = orders.filter(o => ['delivered', 'cancelled', 'shipping'].includes(o.status));
+  const handleUpdateStatus = async (id: string, status: Order['status']) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', id);
+
+    if (!error) {
+      setDbOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    } else {
+      alert('Erro ao atualizar status.');
+    }
+  };
+
+  const handleDeleteOrder = async (id: string) => {
+    if (confirm('Deseja realmente excluir este pedido?')) {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', id);
+
+      if (!error) {
+        setDbOrders(prev => prev.filter(o => o.id !== id));
+      } else {
+        alert('Erro ao excluir pedido.');
+      }
+    }
+  };
+
+  const handleSendMessageLocally = async (text: string) => {
+    if (!activeChatOrder || !storeId || !text.trim()) return;
+    const sent = await sendOrderMessage(activeChatOrder.id, storeId, text);
+    if (sent) {
+      setOrderMessages(prev => [...prev, sent]);
+    }
+  };
 
   const statusMap: any = {
     pending: 'Pendente',
@@ -161,7 +247,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50">
-      {/* Sidebar Desktop */}
       <aside className="w-64 bg-white border-r hidden lg:flex flex-col sticky top-0 h-screen">
         <div className="p-6 border-b">
           <div className="flex items-center text-red-600 font-black text-2xl tracking-tight italic gap-1">
@@ -177,7 +262,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
           <button onClick={() => setActiveTab('orders')} className={`w-full flex items-center p-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'orders' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:bg-gray-100'}`}>
             <div className="relative mr-3">
               <Package size={20} />
-              {activeOrders.filter(o => o.status === 'pending').length > 0 && <span className="absolute -top-1 -right-1 bg-red-600 w-2.5 h-2.5 rounded-full border-2 border-white"></span>}
+              {dbOrders.filter(o => o.status === 'pending').length > 0 && <span className="absolute -top-1 -right-1 bg-red-600 w-2.5 h-2.5 rounded-full border-2 border-white"></span>}
             </div>
             Pedidos
           </button>
@@ -193,7 +278,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
         </div>
       </aside>
 
-      {/* Conteúdo Principal */}
       <main className="flex-1 overflow-y-auto pb-32 lg:pb-0">
         <AppHeader
           title={activeTab === 'dashboard' ? 'Métricas' : activeTab === 'orders' ? 'Pedidos' : 'Cardápio'}
@@ -208,14 +292,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
           {activeTab === 'dashboard' && (
             <>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-                <div className="bg-white p-5 lg:p-7 rounded-[2rem] lg:rounded-[2.5rem] shadow-sm border-2 border-gray-50">
-                  <p className="text-gray-400 text-[9px] lg:text-[10px] font-black uppercase tracking-widest mb-1">Ativos</p>
-                  <p className="text-2xl lg:text-4xl font-black text-red-600 italic tracking-tighter">{activeOrders.length}</p>
-                </div>
-                <div className="bg-white p-5 lg:p-7 rounded-[2rem] lg:rounded-[2.5rem] shadow-sm border-2 border-gray-50">
-                  <p className="text-gray-400 text-[9px] lg:text-[10px] font-black uppercase tracking-widest mb-1">Total Pedidos</p>
-                  <p className="text-2xl lg:text-4xl font-black text-gray-900 italic tracking-tighter">{orders.length}</p>
-                </div>
+                <StatCard icon={<ShoppingBag />} label="Total Pedidos" value={dbOrders.length.toString()} />
+                <StatCard icon={<Clock />} label="Ativos" value={dbOrders.filter(o => ['pending', 'confirmed', 'ready'].includes(o.status)).length.toString()} />
+                <StatCard icon={<CheckCircle />} label="Concluídos" value={dbOrders.filter(o => o.status === 'delivered').length.toString()} />
+                <StatCard icon={<User />} label="Clientes" value={new Set(dbOrders.map(o => o.customerId)).size.toString()} />
               </div>
 
               <div className="bg-white p-5 lg:p-8 rounded-[2.5rem] lg:rounded-[3rem] shadow-sm border-2 border-gray-50">
@@ -243,32 +323,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
           {activeTab === 'orders' && (
             <div className="space-y-10">
               <section className="space-y-6">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center px-2">
                   <h2 className="text-xl lg:text-2xl font-black text-gray-900 italic tracking-tighter uppercase">Fila de Produção</h2>
-                  <div className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{activeOrders.length} Ativos</div>
+                  <div className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    {dbOrders.filter(o => ['pending', 'confirmed', 'ready'].includes(o.status)).length} Ativos
+                  </div>
                 </div>
 
-                {activeOrders.length === 0 ? (
+                {dbOrders.length === 0 ? (
                   <div className="bg-white p-12 lg:p-16 rounded-[2.5rem] lg:rounded-[3rem] text-center border-4 border-dashed border-gray-100">
                     <Package size={48} className="mx-auto mb-4 text-gray-200" />
                     <p className="text-gray-400 font-black uppercase tracking-widest text-xs italic">Sem pedidos pendentes...</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                    {activeOrders.map(order => (
+                    {dbOrders.filter(o => !['delivered', 'cancelled'].includes(o.status)).map(order => (
                       <div key={order.id} className="bg-white p-6 lg:p-8 rounded-[2.5rem] lg:rounded-[3rem] shadow-sm border-2 border-gray-50 hover:border-red-200 transition-all group animate-in fade-in zoom-in-95">
                         <div className="flex justify-between items-start mb-6">
                           <div>
-                            <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1 italic">#{order.id}</p>
+                            <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1 italic">#{order.id.slice(0, 8)}</p>
                             <p className="text-gray-900 font-black text-xl lg:text-2xl tracking-tighter">R${order.total.toFixed(2)}</p>
                           </div>
-                          <div className={`px-3 lg:px-4 py-1.5 rounded-full text-[9px] lg:text-[10px] font-black uppercase tracking-widest ${order.status === 'pending' ? 'bg-red-100 text-red-600' :
-                            order.status === 'confirmed' ? 'bg-orange-100 text-orange-600' :
-                              'bg-blue-100 text-blue-600'
-                            }`}>
+                          <div className={`px-3 lg:px-4 py-1.5 rounded-full text-[9px] lg:text-[10px] font-black uppercase tracking-widest ${statusColors[order.status]}`}>
                             {statusMap[order.status]}
                           </div>
                         </div>
+
                         <div className="space-y-2 mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">
                           {order.items.map((item, i) => (
                             <div key={i} className="text-xs font-bold flex justify-between">
@@ -281,7 +361,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
                         <div className="flex gap-2">
                           {order.status === 'pending' && (
                             <button
-                              onClick={() => onUpdateOrder(order.id, 'confirmed')}
+                              onClick={() => handleUpdateStatus(order.id, 'confirmed')}
                               className="flex-1 bg-gray-900 text-white py-4 rounded-[1.5rem] font-black text-[10px] lg:text-xs uppercase tracking-widest hover:bg-red-600 transition-all flex items-center justify-center gap-3 shadow-xl"
                             >
                               <CheckCircle size={18} /> Confirmar
@@ -289,16 +369,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
                           )}
                           {order.status === 'confirmed' && (
                             <button
-                              onClick={() => onUpdateOrder(order.id, 'ready')}
+                              onClick={() => handleUpdateStatus(order.id, 'ready')}
                               className="flex-1 bg-red-600 text-white py-4 rounded-[1.5rem] font-black text-[10px] lg:text-xs uppercase tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-3 shadow-xl"
                             >
                               <ChefHat size={18} /> Pronto
                             </button>
                           )}
                           {order.status === 'ready' && (
-                            <div className="flex-1 bg-gray-100 text-gray-400 py-4 rounded-[1.5rem] font-black text-[10px] lg:text-xs uppercase tracking-widest flex items-center justify-center gap-3 italic">
-                              <Clock size={18} /> Coleta pendente
-                            </div>
+                            <button
+                              onClick={() => handleUpdateStatus(order.id, 'shipping')}
+                              className="flex-1 bg-blue-600 text-white py-4 rounded-[1.5rem] font-black text-[10px] lg:text-xs uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-3 shadow-xl"
+                            >
+                              <Package size={18} /> Iniciar Entrega
+                            </button>
                           )}
 
                           <button
@@ -306,15 +389,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
                             className="p-4 bg-blue-50 text-blue-600 rounded-[1.5rem] hover:bg-blue-600 hover:text-white transition-all shadow-sm group relative"
                           >
                             <MessageCircle size={18} />
-                            {messages.filter(m => m.orderId === order.id && m.sender === 'user').length > 0 && (
-                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-white rounded-full animate-pulse"></span>
-                            )}
                           </button>
 
                           <button
-                            onClick={() => onDeleteOrder(order.id)}
+                            onClick={() => handleDeleteOrder(order.id)}
                             className="p-4 bg-red-50 text-red-600 rounded-[1.5rem] hover:bg-red-600 hover:text-white transition-all shadow-sm group"
-                            title="Remover Pedido"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -325,7 +404,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
                 )}
               </section>
 
-              {historyOrders.length > 0 && (
+              {dbOrders.filter(o => ['delivered', 'cancelled'].includes(o.status)).length > 0 && (
                 <section className="space-y-6 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
                   <div className="flex justify-between items-center px-2">
                     <h2 className="text-lg font-black text-gray-400 italic tracking-tighter uppercase flex items-center gap-2">
@@ -333,26 +412,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
                     </h2>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {historyOrders.map(order => (
+                    {dbOrders.filter(o => ['delivered', 'cancelled'].includes(o.status)).map(order => (
                       <div key={order.id} className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm flex items-center justify-between group">
                         <div>
-                          <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-0.5">#{order.id}</p>
+                          <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-0.5">#{order.id.slice(0, 8)}</p>
                           <div className="flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full ${order.status === 'delivered' ? 'bg-green-500' : 'bg-red-400'}`}></span>
                             <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">{statusMap[order.status]}</span>
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => setActiveChatOrder(order)}
-                            className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
-                          >
+                          <button onClick={() => setActiveChatOrder(order)} className="p-2 text-gray-300 hover:text-blue-500 transition-colors">
                             <MessageCircle size={16} />
                           </button>
-                          <button
-                            onClick={() => onDeleteOrder(order.id)}
-                            className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-                          >
+                          <button onClick={() => handleDeleteOrder(order.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -389,7 +462,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
                     {loadingProducts ? (
                       <tr>
                         <td colSpan={4} className="px-6 py-12 text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-600 mx-auto mb-2"></div>
+                          <Loader2 size={32} className="animate-spin text-red-600 mx-auto mb-2" />
                           <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Carregando cardápio...</p>
                         </td>
                       </tr>
@@ -431,29 +504,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
         </div>
       </main>
 
-      {/* Admin Chat Modal */}
-      <Modal
-        isOpen={!!activeChatOrder}
-        onClose={() => setActiveChatOrder(null)}
-        title={activeChatOrder ? `Pedido #${activeChatOrder.id}` : ''}
-        subtitle="Chat Direto com Estabelecimento"
-      >
-        <ChatInterface
-          messages={messages.filter(m => m.orderId === activeChatOrder?.id)}
-          onSendMessage={(text) => activeChatOrder && onSendMessage(activeChatOrder.id, text, 'store')}
-          senderRole="store"
-          placeholder="Responda ao cliente..."
-        />
-      </Modal>
-
-      {/* Nav Mobile */}
       <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-gray-100 flex justify-around py-4 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] rounded-t-[2.5rem]">
         <NavButton icon={<LayoutDashboard />} label="Painel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
         <NavButton icon={<Package />} label="Pedidos" active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} />
         <NavButton icon={<ShoppingBag />} label="Cardápio" active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} />
       </nav>
 
-      {/* Modal Novo Prato */}
+      <Modal
+        isOpen={!!activeChatOrder}
+        onClose={() => setActiveChatOrder(null)}
+        title={activeChatOrder ? `Pedido #${activeChatOrder.id.slice(0, 8)}` : ''}
+        subtitle="Chat Direto com Cliente"
+      >
+        <div className="h-[500px] flex flex-col p-4">
+          <ChatInterface
+            messages={orderMessages}
+            onSendMessage={handleSendMessageLocally}
+            senderRole="store"
+            placeholder="Responda ao cliente..."
+          />
+        </div>
+      </Modal>
+
       <Modal
         isOpen={showNewProductModal}
         onClose={() => setShowNewProductModal(false)}
@@ -483,24 +555,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode, orders, onUpdateO
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Nome do Prato</label>
             <input required placeholder="Ex: Burger Gourmet" className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold shadow-inner" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
           </div>
+
           <div className="space-y-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Preço (R$)</label>
-            <input required type="number" step="0.01" placeholder="0,00" className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold shadow-inner" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} />
+            <input required type="number" step="0.01" placeholder="0.00" className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold shadow-inner" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} />
           </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Categoria</label>
+            <select className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold shadow-inner appearance-none" value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}>
+              {CATEGORIES.filter(c => c.name !== 'Todos').map(c => (
+                <option key={c.name} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Descrição</label>
-            <textarea required placeholder="Descreva os ingredientes..." className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold h-32 shadow-inner" value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} />
+            <textarea placeholder="Fale um pouco sobre o prato..." className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold shadow-inner h-24" value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} />
           </div>
-          <button
-            type="submit"
-            disabled={isUploading}
-            className="w-full bg-red-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-red-100 mt-4 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:bg-gray-400"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} /> Salvando...
-              </>
-            ) : 'Salvar Prato'}
+
+          <button type="submit" disabled={isUploading} className="w-full py-5 bg-red-600 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-red-100 hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3">
+            {isUploading ? <Loader2 className="animate-spin" /> : <>Criar Prato <Plus size={20} /></>}
           </button>
         </form>
       </Modal>
