@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabase';
 import { Coupon, Store, SupportTicket } from '../../types';
-import { MessageSquare, Ticket, Building2, LogOut, CheckCircle, XCircle, Plus, Trash2, Send, Activity, DollarSign, Users, ShoppingBag } from 'lucide-react';
+import { MessageSquare, Ticket, Building2, LogOut, CheckCircle, XCircle, Plus, Trash2, Send, Activity, DollarSign, Users, ShoppingBag, ChevronLeft } from 'lucide-react';
 
 interface StaffDashboardProps {
     onLogout: () => void;
@@ -36,6 +36,20 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
     // Support state
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [replyText, setReplyText] = useState('');
+    const [selectedUser, setSelectedUser] = useState<string | null>(null);
+
+    // Group tickets by user
+    const ticketsByUser = tickets.reduce((acc, ticket) => {
+        if (!acc[ticket.user_id]) acc[ticket.user_id] = [];
+        acc[ticket.user_id].push(ticket);
+        return acc;
+    }, {} as Record<string, SupportTicket[]>);
+
+    const activeConversations = Object.keys(ticketsByUser).sort((a, b) => {
+        const lastA = new Date(ticketsByUser[a][0].created_at).getTime();
+        const lastB = new Date(ticketsByUser[b][0].created_at).getTime();
+        return lastB - lastA;
+    });
 
     useEffect(() => {
         fetchData();
@@ -138,7 +152,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
         const { error } = await supabase
             .from('support_messages')
             .insert({
-                user_id: userId,
+                user_id: selectedUser || userId, // Use selectedUser if available
                 text: replyText,
                 sender_type: 'staff'
             });
@@ -350,27 +364,93 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
                 )}
 
                 {currentTab === 'support' && (
-                    <div className="space-y-4">
-                        <h2 className="text-lg font-bold mb-4">Mensagens de Suporte</h2>
-                        <div className="grid md:grid-cols-1 gap-4">
-                            {tickets.length === 0 ? (
-                                <p className="text-gray-400">Nenhuma mensagem encontrada.</p>
-                            ) : (
-                                tickets.map(ticket => (
-                                    <div key={ticket.id} className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 ${ticket.sender_type === 'staff' ? 'ml-8 bg-blue-50 border-blue-100' : 'mr-8'}`}>
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
-                                                {ticket.sender_type === 'staff' ? 'Staff' : 'Usuário ' + ticket.user_id.slice(0, 8)}
-                                            </span>
-                                            <span className="text-xs text-gray-300">
-                                                {new Date(ticket.created_at).toLocaleString()}
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-800">{ticket.text}</p>
+                    <div className="h-[calc(100vh-220px)] flex flex-col">
+                        {/* If no user selected, show list of conversations */}
+                        {!selectedUser ? (
+                            <div className="space-y-4">
+                                <h2 className="text-lg font-bold mb-4">Conversas Recentes</h2>
+                                {activeConversations.length === 0 ? (
+                                    <p className="text-gray-400">Nenhuma mensagem encontrada.</p>
+                                ) : (
+                                    activeConversations.map(userId => {
+                                        const lastMsg = ticketsByUser[userId][0];
+                                        return (
+                                            <button
+                                                key={userId}
+                                                onClick={() => setSelectedUser(userId)}
+                                                className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
+                                            >
+                                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                                                    {userId.slice(0, 2).toUpperCase()}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between">
+                                                        <span className="font-bold text-gray-900">Usuário {userId.slice(0, 8)}</span>
+                                                        <span className="text-xs text-gray-400">{new Date(lastMsg.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-500 line-clamp-1">{lastMsg.text}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        ) : (
+                            // Chat View
+                            <div className="flex flex-col h-full bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+                                    <button onClick={() => setSelectedUser(null)} className="p-2 hover:bg-gray-200 rounded-lg">
+                                        <ChevronLeft size={20} />
+                                    </button>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900">Usuário {selectedUser.slice(0, 8)}</h3>
+                                        <p className="text-xs text-gray-500">Suporte ao Cliente</p>
                                     </div>
-                                ))
-                            )}
-                        </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col-reverse">
+                                    {ticketsByUser[selectedUser]?.map(ticket => (
+                                        <div
+                                            key={ticket.id}
+                                            className={`max-w-[80%] p-4 rounded-2xl text-sm ${ticket.sender_type === 'staff'
+                                                    ? 'bg-red-50 text-red-900 self-end rounded-tr-none'
+                                                    : 'bg-gray-100 text-gray-900 self-start rounded-tl-none'
+                                                }`}
+                                        >
+                                            <p>{ticket.text}</p>
+                                            <p className={`text-[10px] mt-1 ${ticket.sender_type === 'staff' ? 'text-red-300' : 'text-gray-400'}`}>
+                                                {new Date(ticket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="p-4 border-t border-gray-100 bg-gray-50">
+                                    <form
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            handleSendReply(selectedUser);
+                                        }}
+                                        className="flex gap-2"
+                                    >
+                                        <input
+                                            type="text"
+                                            placeholder="Digite sua resposta..."
+                                            className="flex-1 bg-white border-none rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-red-500/20"
+                                            value={replyText}
+                                            onChange={e => setReplyText(e.target.value)}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={!replyText.trim()}
+                                            className="bg-red-600 text-white p-3 rounded-xl hover:bg-red-700 disabled:bg-gray-300 transition-colors"
+                                        >
+                                            <Send size={20} />
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
