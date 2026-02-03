@@ -354,7 +354,7 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                         </div>
                       </div>
                       <button
-                        onClick={() => onUpdateOrder(order.id, 'shipping', courierId)}
+                        onClick={() => handleClaimDelivery(order.id)}
                         disabled={!!myCurrentOrder}
                         className="w-full bg-gray-900 text-white py-4.5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest active:scale-95 disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center gap-3 hover:bg-black shadow-xl shadow-gray-100"
                       >
