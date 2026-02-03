@@ -40,7 +40,7 @@ export interface Order {
   customerId: string;
   store_id: string;
   items: Array<{ product: Product; quantity: number }>;
-  status: 'pending' | 'confirmed' | 'ready' | 'shipping' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'ready' | 'accepted' | 'shipping' | 'delivered' | 'cancelled';
   total: number;
   createdAt: string;
   address: string;

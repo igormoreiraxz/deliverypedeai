@@ -8,7 +8,8 @@ import {
   updateCourierStatus,
   subscribeToAvailableDeliveries,
   getCourierActiveDelivery,
-  getCourierDeliveryHistory
+  getCourierDeliveryHistory,
+  confirmCollection
 } from '../services/couriers';
 import {
   MapPin,
@@ -151,7 +152,7 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
     }
 
     setAvailableOrders(prev => prev.filter(o => o.id !== orderId));
-    setMyCurrentOrder({ ...orderToClaim, courierId, status: 'shipping' });
+    setMyCurrentOrder({ ...orderToClaim, courierId, status: 'accepted' });
 
     // Attempt to claim
     const success = await claimDelivery(orderId, courierId);
@@ -166,9 +167,36 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
     setIsClaimingOrder(false);
   };
 
+  const handleConfirmCollection = async () => {
+    if (!myCurrentOrder || myCurrentOrder.status !== 'accepted') return;
+
+    // Optimistic update
+    setMyCurrentOrder({ ...myCurrentOrder, status: 'shipping' });
+
+    const success = await confirmCollection(myCurrentOrder.id, courierId);
+
+    if (!success) {
+      alert('Erro ao confirmar coleta. Tente novamente.');
+      setMyCurrentOrder({ ...myCurrentOrder, status: 'accepted' });
+    }
+  };
+
   // Helper functions
   const calculateCommission = (total: number) => total * 0.15;
   const totalGains = myHistory.reduce((acc, curr) => acc + calculateCommission(curr.total), 0);
+
+  // Calculate monthly earnings
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const monthlyEarnings = myHistory
+    .filter(order => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+    })
+    .reduce((acc, curr) => acc + calculateCommission(curr.total), 0);
+
+  const bonusValue = 0; // Hardcoded to 0 as per request
 
   return (
     <div className="max-w-md mx-auto bg-gray-50 min-h-screen shadow-lg pb-24 relative overflow-hidden">
@@ -234,7 +262,9 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
               <section className="bg-red-600 text-white p-7 rounded-[3rem] shadow-2xl relative overflow-hidden group">
                 <div className="relative z-10">
                   <div className="flex justify-between items-center mb-6">
-                    <span className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">Entrega em Curso</span>
+                    <span className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">
+                      {myCurrentOrder.status === 'accepted' ? 'AGUARDANDO COLETA' : 'ENTREGA EM CURSO'}
+                    </span>
                     <span className="font-black italic text-lg tracking-tighter">{myCurrentOrder.id}</span>
                   </div>
                   <div className="mb-6">
@@ -242,12 +272,21 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                     <p className="text-xl font-black italic tracking-tight leading-tight">{myCurrentOrder.address}</p>
                   </div>
                   <div className="flex gap-3">
-                    <button
-                      onClick={() => onUpdateOrder(myCurrentOrder.id, 'delivered')}
-                      className="flex-1 bg-white text-red-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-gray-50 flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle2 size={18} /> Finalizar Entrega
-                    </button>
+                    {myCurrentOrder.status === 'accepted' ? (
+                      <button
+                        onClick={handleConfirmCollection}
+                        className="flex-1 bg-white text-red-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-gray-50 flex items-center justify-center gap-2"
+                      >
+                        Confirmar Coleta
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onUpdateOrder(myCurrentOrder.id, 'delivered')}
+                        className="flex-1 bg-white text-red-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-gray-50 flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle2 size={18} /> Finalizar Entrega
+                      </button>
+                    )}
                     <button className="p-4 bg-red-700/50 backdrop-blur-sm rounded-2xl text-white hover:bg-red-700 transition-all">
                       <Navigation size={22} className="fill-current" />
                     </button>
@@ -394,11 +433,11 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white p-6 rounded-[2.5rem] border border-gray-50">
                 <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-1">Total Mês</p>
-                <p className="text-xl font-black italic text-gray-900 tracking-tighter">R$ 1.250,00</p>
+                <p className="text-xl font-black italic text-gray-900 tracking-tighter">R$ {monthlyEarnings.toFixed(2)}</p>
               </div>
               <div className="bg-white p-6 rounded-[2.5rem] border border-gray-50">
                 <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-1">Bônus</p>
-                <p className="text-xl font-black italic text-red-600 tracking-tighter">R$ 120,00</p>
+                <p className="text-xl font-black italic text-red-600 tracking-tighter">R$ {bonusValue.toFixed(2)}</p>
               </div>
             </div>
           </div>

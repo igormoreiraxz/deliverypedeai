@@ -34,16 +34,21 @@ export const getAvailableDeliveries = async (): Promise<Order[]> => {
 };
 
 /**
- * Atomically claim a delivery for a courier
- * Returns true if successful, false if already claimed by another courier
  */
 export const claimDelivery = async (orderId: string, courierId: string): Promise<boolean> => {
+    // Verify user ID matches courierId to prevent auth errors
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.id !== courierId) {
+        console.error('Auth mismatch: Attempting to claim for different user');
+        return false;
+    }
+
     // Use Supabase RPC or direct update with conditions to prevent race conditions
     const { data, error } = await supabase
         .from('orders')
         .update({
             courier_id: courierId,
-            status: 'shipping'
+            status: 'accepted'
         })
         .eq('id', orderId)
         .eq('status', 'ready')
@@ -57,6 +62,25 @@ export const claimDelivery = async (orderId: string, courierId: string): Promise
 
     // If no rows were updated, it means another courier claimed it first
     return data && data.length > 0;
+};
+
+/**
+ * Confirm collection of order (change status from accepted to shipping)
+ */
+export const confirmCollection = async (orderId: string, courierId: string): Promise<boolean> => {
+    const { error } = await supabase
+        .from('orders')
+        .update({ status: 'shipping' })
+        .eq('id', orderId)
+        .eq('courier_id', courierId)
+        .eq('status', 'accepted');
+
+    if (error) {
+        console.error('Error confirming collection:', error);
+        return false;
+    }
+
+    return true;
 };
 
 /**
@@ -169,7 +193,7 @@ export const getCourierActiveDelivery = async (courierId: string): Promise<Order
         .from('orders')
         .select('*')
         .eq('courier_id', courierId)
-        .eq('status', 'shipping')
+        .in('status', ['accepted', 'shipping'])
         .single();
 
     if (error || !data) {
