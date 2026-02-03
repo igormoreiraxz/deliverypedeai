@@ -4,7 +4,8 @@ export enum AppView {
   LOGIN = 'login',
   CUSTOMER = 'customer',
   COURIER = 'courier',
-  ADMIN = 'admin'
+  ADMIN = 'admin',
+  STAFF = 'staff'
 }
 
 export interface Address {
@@ -54,4 +55,25 @@ export interface Store {
   deliveryTime: string;
   image: string;
   category: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discount_value: number;
+  discount_type: 'percentage' | 'fixed';
+  min_order_value: number;
+  max_discount_value?: number;
+  valid_until?: string;
+  active: boolean;
+  created_at: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  staff_id?: string;
+  text: string;
+  sender_type: 'user' | 'staff';
+  created_at: string;
 }

@@ -42,8 +42,31 @@ const LoginClient: React.FC<LoginClientProps> = ({ onBack, onLoginSuccess }) => 
                     password
                 });
                 if (signInError) throw signInError;
+
                 if (data.user) {
-                    onLoginSuccess(AppView.CUSTOMER);
+                    // Fetch user profile to check role
+                    const { data: profile, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', data.user.id)
+                        .single();
+
+                    if (profileError) {
+                        console.error('Error fetching profile:', profileError);
+                        // Default to customer if error, or handle appropriately
+                        onLoginSuccess(AppView.CUSTOMER);
+                    } else if (profile?.role === 'staff') {
+                        onLoginSuccess(AppView.STAFF);
+                    } else if (profile?.role === 'store') {
+                        // Assuming there is a STORE view or similar, for now logging
+                        console.log('Store login');
+                        // You might want to handle store login here too if not already
+                        onLoginSuccess(AppView.CUSTOMER); // consistent with previous default? Or maybe should be separate.
+                        // Previous code just did onLoginSuccess(AppView.CUSTOMER).
+                        // I will keep it for non-staff for now to not break existing flow, unless told otherwise.
+                    } else {
+                        onLoginSuccess(AppView.CUSTOMER);
+                    }
                 }
             }
         } catch (err: any) {

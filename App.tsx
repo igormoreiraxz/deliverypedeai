@@ -8,6 +8,8 @@ import AdminPanel from './components/AdminPanel';
 import LoginClient from './components/auth/LoginClient';
 import LoginStore from './components/auth/LoginStore';
 import LoginCourier from './components/auth/LoginCourier';
+
+import StaffDashboard from './components/staff/StaffDashboard';
 import { supabase } from './services/supabase';
 
 const App: React.FC = () => {
@@ -87,9 +89,10 @@ const App: React.FC = () => {
   const sendMessage = (orderId: string, text: string, sender: 'user' | 'store') => {
     const newMessage: Message = {
       id: Date.now().toString(),
-      orderId,
+      order_id: orderId,
       text,
       sender,
+      sender_id: 'pending', // Placeholder as per types requirements
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, newMessage]);
@@ -150,6 +153,12 @@ const App: React.FC = () => {
             onSendMessage={sendMessage}
           />
         )}
+
+        {currentView === AppView.STAFF && (
+          <StaffDashboard onLogout={resetToOnboarding} />
+        )}
+
+
       </div>
     </div>
   );
