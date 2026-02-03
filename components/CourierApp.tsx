@@ -9,7 +9,8 @@ import {
   subscribeToAvailableDeliveries,
   getCourierActiveDelivery,
   getCourierDeliveryHistory,
-  confirmCollection
+  confirmCollection,
+  completeDelivery
 } from '../services/couriers';
 import {
   MapPin,
@@ -181,6 +182,23 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
     }
   };
 
+  const handleCompleteDelivery = async () => {
+    if (!myCurrentOrder || myCurrentOrder.status !== 'shipping') return;
+
+    // Optimistic update - remove from current order, add to history
+    const completedOrder = { ...myCurrentOrder, status: 'delivered' as const };
+    setMyCurrentOrder(null);
+    setMyHistory(prev => [completedOrder, ...prev]);
+
+    const success = await completeDelivery(completedOrder.id, courierId);
+
+    if (!success) {
+      alert('Erro ao finalizar entrega. Tente novamente.');
+      setMyCurrentOrder(completedOrder); // Restore if failed
+      setMyHistory(prev => prev.filter(o => o.id !== completedOrder.id));
+    }
+  };
+
   // Helper functions
   const calculateCommission = (total: number) => total * 0.15;
   const totalGains = myHistory.reduce((acc, curr) => acc + calculateCommission(curr.total), 0);
@@ -281,7 +299,7 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
                       </button>
                     ) : (
                       <button
-                        onClick={() => onUpdateOrder(myCurrentOrder.id, 'delivered')}
+                        onClick={handleCompleteDelivery}
                         className="flex-1 bg-white text-red-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-gray-50 flex items-center justify-center gap-2"
                       >
                         <CheckCircle2 size={18} /> Finalizar Entrega

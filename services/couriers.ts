@@ -241,3 +241,22 @@ export const getCourierDeliveryHistory = async (courierId: string): Promise<Orde
         courierId: order.courier_id
     }));
 };
+
+/**
+ * Complete delivery (change status from shipping to delivered)
+ */
+export const completeDelivery = async (orderId: string, courierId: string): Promise<boolean> => {
+    const { error } = await supabase
+        .from('orders')
+        .update({ status: 'delivered' })
+        .eq('id', orderId)
+        .eq('courier_id', courierId)
+        .eq('status', 'shipping');
+
+    if (error) {
+        console.error('Error completing delivery:', error);
+        return false;
+    }
+
+    return true;
+};
