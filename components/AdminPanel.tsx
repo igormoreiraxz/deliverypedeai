@@ -60,6 +60,7 @@ const statusColors: { [key: string]: string } = {
   shipping: 'bg-purple-100 text-purple-600',
   delivered: 'bg-green-100 text-green-600',
   cancelled: 'bg-gray-100 text-gray-600',
+  accepted: 'bg-indigo-100 text-indigo-600',
 };
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
@@ -78,6 +79,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
   const [storeImageFile, setStoreImageFile] = useState<File | null>(null);
   const [storeImagePreview, setStoreImagePreview] = useState<string | null>(null);
   const [isUploadingStoreImage, setIsUploadingStoreImage] = useState(false);
+  const [lastDeliveredOrder, setLastDeliveredOrder] = useState<Order | null>(null);
+  const [showDeliveryPopup, setShowDeliveryPopup] = useState(false);
 
   useEffect(() => {
     let orderSub: any;
@@ -106,6 +109,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
                 if (prev.some(o => o.id === order.id)) return prev;
                 return [order, ...prev];
               } else {
+                // Check for delivery completion to show popup
+                if (order.status === 'delivered') {
+                  const oldOrder = prev.find(o => o.id === order.id);
+                  if (oldOrder && oldOrder.status !== 'delivered') {
+                    setLastDeliveredOrder(order);
+                    setShowDeliveryPopup(true);
+                    // Auto hide after 5 seconds
+                    setTimeout(() => setShowDeliveryPopup(false), 5000);
+                  }
+                }
                 return prev.map(o => o.id === order.id ? order : o);
               }
             });
@@ -316,7 +329,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
     ready: 'Pronto',
     shipping: 'Em Entrega',
     delivered: 'Entregue',
-    cancelled: 'Cancelado'
+    cancelled: 'Cancelado',
+    accepted: 'Entregador a Caminho'
   };
 
   return (
@@ -364,6 +378,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
             </button>
           }
         />
+
+        {/* Delivery Success Popup */}
+        {showDeliveryPopup && lastDeliveredOrder && (
+          <div className="fixed top-24 right-6 z-[100] animate-in slide-in-from-right-10 duration-500">
+            <div className="bg-white p-6 rounded-[2rem] shadow-2xl border-2 border-green-100 flex items-center gap-4 max-w-sm">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                <CheckCircle className="text-green-600" size={24} />
+              </div>
+              <div>
+                <h4 className="font-black text-gray-900 italic uppercase">Pedido Entregue!</h4>
+                <p className="text-xs text-gray-500 font-bold">O pedido #{lastDeliveredOrder.id.slice(0, 8)} foi finalizado com sucesso.</p>
+              </div>
+              <button onClick={() => setShowDeliveryPopup(false)} className="ml-2 text-gray-400 hover:text-gray-600">
+                <XAxis size={18} />
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="p-4 lg:p-8 max-w-6xl mx-auto space-y-6 lg:space-y-8">
           {activeTab === 'dashboard' && (
@@ -442,7 +474,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
                 <div className="flex justify-between items-center px-2">
                   <h2 className="text-xl lg:text-2xl font-black text-gray-900 italic tracking-tighter uppercase">Fila de Produção</h2>
                   <div className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                    {dbOrders.filter(o => ['pending', 'confirmed', 'ready'].includes(o.status)).length} Ativos
+                    {dbOrders.filter(o => ['pending', 'confirmed', 'ready', 'accepted'].includes(o.status)).length} Ativos
                   </div>
                 </div>
 
@@ -491,13 +523,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
                               <ChefHat size={18} /> Pronto
                             </button>
                           )}
+                          {/* Modified logic for Ready/Accepted states */}
                           {order.status === 'ready' && (
-                            <button
-                              onClick={() => handleUpdateStatus(order.id, 'shipping')}
-                              className="flex-1 bg-blue-600 text-white py-4 rounded-[1.5rem] font-black text-[10px] lg:text-xs uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-3 shadow-xl"
-                            >
-                              <Package size={18} /> Iniciar Entrega
-                            </button>
+                            <div className="flex-1 bg-blue-50 text-blue-600 py-4 rounded-[1.5rem] font-black text-[10px] lg:text-xs uppercase tracking-widest border border-blue-100 flex items-center justify-center gap-3 animate-pulse">
+                              <Loader2 size={18} className="animate-spin" /> Buscando Entregador status...
+                            </div>
+                          )}
+                          {order.status === 'accepted' && (
+                            <div className="flex-1 bg-purple-50 text-purple-600 py-4 rounded-[1.5rem] font-black text-[10px] lg:text-xs uppercase tracking-widest border border-purple-100 flex items-center justify-center gap-3">
+                              <Clock size={18} /> Entregador a Caminho
+                            </div>
+                          )}
+                          {order.status === 'shipping' && (
+                            <div className="flex-1 bg-gray-50 text-gray-400 py-4 rounded-[1.5rem] font-black text-[10px] lg:text-xs uppercase tracking-widest border border-gray-100 flex items-center justify-center gap-3">
+                              <Package size={18} /> Em Trânsito
+                            </div>
                           )}
 
                           <button
