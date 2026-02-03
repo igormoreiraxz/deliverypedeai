@@ -200,7 +200,8 @@ const CourierApp: React.FC<CourierAppProps> = ({ onSwitchMode, orders, onUpdateO
   };
 
   // Helper functions
-  const calculateCommission = (total: number) => total * 0.15;
+  // Fixed earning per delivery
+  const calculateCommission = (total: number) => 6.00;
   const totalGains = myHistory.reduce((acc, curr) => acc + calculateCommission(curr.total), 0);
 
   // Calculate monthly earnings
