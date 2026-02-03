@@ -68,6 +68,18 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
 
   const DELIVERY_FEE = 6.00;
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
+  const TimelineItem = ({ label, time, completed, final = false }: { label: string, time?: string, completed: boolean, final?: boolean }) => (
+    <div className={`flex justify-between items-center ${completed ? 'opacity-100' : 'opacity-40'}`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-2 h-2 rounded-full ${completed ? (final ? 'bg-green-500' : 'bg-red-600') : 'bg-gray-300'}`}></div>
+        <span className={`text-xs font-bold ${completed ? 'text-gray-900' : 'text-gray-400'}`}>{label}</span>
+      </div>
+      {time && <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+        {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </span>}
+    </div>
+  );
   const [dbProducts, setDbProducts] = useState<Product[]>([]);
   const [dbStores, setDbStores] = useState<Store[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
@@ -746,7 +758,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
         <div className="p-6 space-y-8">
           <section className="bg-gray-50 p-6 rounded-[2.5rem] border border-gray-100">
             <h2 className={`font-black text-xl mb-4 ${currentStatus.color}`}>{currentStatus.label}</h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-4">
               {[1, 2, 3, 4, 5].map((step) => (
                 <div
                   key={step}
@@ -754,6 +766,14 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                     }`}
                 />
               ))}
+            </div>
+
+            <div className="space-y-3 mt-6 border-t border-gray-100 pt-4">
+              <TimelineItem label="Pedido Realizado" time={viewingOrder.createdAt} completed={true} />
+              <TimelineItem label="Confirmado" time={viewingOrder.confirmed_at} completed={!!viewingOrder.confirmed_at} />
+              <TimelineItem label="Em Preparo/Pronto" time={viewingOrder.ready_at} completed={!!viewingOrder.ready_at} />
+              <TimelineItem label="Saiu para Entrega" time={viewingOrder.dispatched_at} completed={!!viewingOrder.dispatched_at} />
+              <TimelineItem label="Entregue" time={viewingOrder.delivered_at} completed={!!viewingOrder.delivered_at} final={true} />
             </div>
           </section>
 

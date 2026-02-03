@@ -44,6 +44,11 @@ export interface Order {
   status: 'pending' | 'confirmed' | 'ready' | 'accepted' | 'shipping' | 'delivered' | 'cancelled';
   total: number;
   createdAt: string;
+  confirmed_at?: string;
+  ready_at?: string;
+  dispatched_at?: string;
+  delivered_at?: string;
+  cancelled_at?: string;
   address: string;
   courierId?: string;
 }

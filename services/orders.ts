@@ -28,7 +28,12 @@ export const createOrder = async (order: Omit<Order, 'id' | 'createdAt'>): Promi
         total: data.total,
         items: data.items,
         createdAt: data.created_at,
-        address: data.address
+        address: data.address,
+        confirmed_at: data.confirmed_at,
+        ready_at: data.ready_at,
+        dispatched_at: data.dispatched_at,
+        delivered_at: data.delivered_at,
+        cancelled_at: data.cancelled_at
     };
 };
 
@@ -52,7 +57,12 @@ export const getOrdersByCustomer = async (customerId: string): Promise<Order[]> 
         total: d.total,
         items: d.items,
         createdAt: d.created_at,
-        address: d.address
+        address: d.address,
+        confirmed_at: d.confirmed_at,
+        ready_at: d.ready_at,
+        dispatched_at: d.dispatched_at,
+        delivered_at: d.delivered_at,
+        cancelled_at: d.cancelled_at
     }));
 };
 
@@ -76,14 +86,28 @@ export const getOrdersByStore = async (storeId: string): Promise<Order[]> => {
         total: d.total,
         items: d.items,
         createdAt: d.created_at,
-        address: d.address
+        address: d.address,
+        confirmed_at: d.confirmed_at,
+        ready_at: d.ready_at,
+        dispatched_at: d.dispatched_at,
+        delivered_at: d.delivered_at,
+        cancelled_at: d.cancelled_at
     }));
 };
 
 export const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<boolean> => {
+    const updates: any = { status };
+    const now = new Date().toISOString();
+
+    if (status === 'confirmed') updates.confirmed_at = now;
+    else if (status === 'ready') updates.ready_at = now;
+    else if (status === 'shipping') updates.dispatched_at = now;
+    else if (status === 'delivered') updates.delivered_at = now;
+    else if (status === 'cancelled') updates.cancelled_at = now;
+
     const { error } = await supabase
         .from('orders')
-        .update({ status })
+        .update(updates)
         .eq('id', orderId);
 
     if (error) {
@@ -112,7 +136,12 @@ export const subscribeToStoreOrders = (storeId: string, callback: (order: Order,
                 total: d.total,
                 items: d.items,
                 createdAt: d.created_at,
-                address: d.address
+                address: d.address,
+                confirmed_at: d.confirmed_at,
+                ready_at: d.ready_at,
+                dispatched_at: d.dispatched_at,
+                delivered_at: d.delivered_at,
+                cancelled_at: d.cancelled_at
             }, eventType);
         })
         .subscribe();
@@ -137,7 +166,12 @@ export const subscribeToCustomerOrders = (customerId: string, callback: (order: 
                 total: d.total,
                 items: d.items,
                 createdAt: d.created_at,
-                address: d.address
+                address: d.address,
+                confirmed_at: d.confirmed_at,
+                ready_at: d.ready_at,
+                dispatched_at: d.dispatched_at,
+                delivered_at: d.delivered_at,
+                cancelled_at: d.cancelled_at
             }, eventType);
         })
         .subscribe();

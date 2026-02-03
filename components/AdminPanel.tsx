@@ -504,6 +504,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSwitchMode }) => {
                               <span className="text-gray-900">x{item.quantity}</span>
                             </div>
                           ))}
+
+                          <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 gap-2">
+                            <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                              Criado: <span className="text-gray-600">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            {order.confirmed_at && (
+                              <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                                Confirmado: <span className="text-gray-600">{new Date(order.confirmed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            )}
+                            {order.ready_at && (
+                              <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                                Pronto: <span className="text-gray-600">{new Date(order.ready_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            )}
+                            {order.dispatched_at && (
+                              <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                                Saiu: <span className="text-gray-600">{new Date(order.dispatched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            )}
+                            {order.delivered_at && (
+                              <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                                Entregue: <span className="text-gray-600">{new Date(order.delivered_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex gap-2">
