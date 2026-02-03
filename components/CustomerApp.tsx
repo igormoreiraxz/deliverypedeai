@@ -667,6 +667,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       pending: { label: 'Pendente', color: 'text-orange-500 bg-orange-50' },
       confirmed: { label: 'Preparando', color: 'text-blue-500 bg-blue-50' },
       ready: { label: 'Pronto p/ Coleta', color: 'text-blue-600 bg-blue-50' },
+      accepted: { label: 'Aguardando Coleta', color: 'text-purple-600 bg-purple-50' },
       shipping: { label: 'Em Entrega', color: 'text-purple-500 bg-purple-50' },
       delivered: { label: 'Entregue', color: 'text-green-500 bg-green-50' },
       cancelled: { label: 'Cancelado', color: 'text-red-500 bg-red-50' }
@@ -721,13 +722,14 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       pending: { label: 'Aguardando Aprovação', step: 1, color: 'text-orange-500' },
       confirmed: { label: 'Em Preparação', step: 2, color: 'text-orange-600' },
       ready: { label: 'Pronto para Coleta', step: 3, color: 'text-blue-500' },
+      accepted: { label: 'Aguardando Coleta', step: 3, color: 'text-purple-600' },
       shipping: { label: 'Saiu para Entrega', step: 4, color: 'text-purple-500' },
       delivered: { label: 'Pedido Entregue', step: 5, color: 'text-green-500' },
       cancelled: { label: 'Pedido Cancelado', step: 0, color: 'text-red-500' }
     };
 
     const currentStatus = statusMap[viewingOrder.status];
-    const canChat = ['pending', 'confirmed', 'ready', 'shipping', 'delivered'].includes(viewingOrder.status);
+    const canChat = ['pending', 'confirmed', 'ready', 'accepted', 'shipping', 'delivered'].includes(viewingOrder.status);
 
     return (
       <main className="animate-in slide-in-from-right-10 duration-300 min-h-screen pb-20">
