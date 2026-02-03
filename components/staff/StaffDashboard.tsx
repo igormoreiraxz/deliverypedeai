@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabase';
 import { Coupon, Store, SupportTicket } from '../../types';
-import { MessageSquare, Ticket, Building2, LogOut, CheckCircle, XCircle, Plus, Trash2, Send } from 'lucide-react';
+import { MessageSquare, Ticket, Building2, LogOut, CheckCircle, XCircle, Plus, Trash2, Send, Activity, DollarSign, Users, ShoppingBag } from 'lucide-react';
 
 interface StaffDashboardProps {
     onLogout: () => void;
@@ -10,7 +10,15 @@ interface StaffDashboardProps {
 const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
     const [activeTab, setActiveTab] = useState<'support' | 'coupons' | 'establishments'>('interactions'); // Typo in initial state fixed in logic below
     // Actually let's use string state for tabs
-    const [currentTab, setCurrentTab] = useState('establishments');
+    const [currentTab, setCurrentTab] = useState('overview');
+
+    // Metrics state
+    const [metrics, setMetrics] = useState({
+        totalDeliveries: 0,
+        totalRevenue: 0,
+        activeCouriers: 0,
+        totalStores: 0
+    });
 
     // Data states
     const [pendingStores, setPendingStores] = useState<any[]>([]);
@@ -55,6 +63,34 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
                 .select('*')
                 .order('created_at', { ascending: false });
             setTickets(data || []);
+            setTickets(data || []);
+        } else if (currentTab === 'overview') {
+            const { count: deliveriesCount, error: ordersError, data: ordersData } = await supabase
+                .from('orders')
+                .select('total', { count: 'exact' })
+                .eq('status', 'delivered');
+
+            // Calculate revenue from fetched data (since we can't do sum easily without rpc or fetching all)
+            // For large datasets this is bad, but for MVP it works.
+            const totalRevenue = ordersData?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+
+            const { count: storesCount } = await supabase
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('role', 'store');
+
+            const { count: couriersCount } = await supabase
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('role', 'courier')
+                .eq('is_online', true);
+
+            setMetrics({
+                totalDeliveries: deliveriesCount || 0,
+                totalRevenue: totalRevenue,
+                totalStores: storesCount || 0,
+                activeCouriers: couriersCount || 0
+            });
         }
         setLoading(false);
     };
@@ -138,6 +174,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
             {/* Tabs */}
             <div className="flex gap-2 p-4 overflow-x-auto bg-white border-b border-gray-100">
                 {[
+                    { id: 'overview', label: 'Visão Geral', icon: Activity },
                     { id: 'establishments', label: 'Estabelecimentos', icon: Building2 },
                     { id: 'coupons', label: 'Cupons', icon: Ticket },
                     { id: 'support', label: 'Suporte', icon: MessageSquare },
@@ -160,6 +197,44 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
 
             {/* Content */}
             <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
+                {currentTab === 'overview' && (
+                    <div>
+                        <h2 className="text-lg font-bold mb-4">Métricas do Sistema</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                                    <ShoppingBag size={20} />
+                                </div>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Entregas</p>
+                                <p className="text-2xl font-black text-gray-900 mt-1">{metrics.totalDeliveries}</p>
+                            </div>
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                                <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mb-4">
+                                    <DollarSign size={20} />
+                                </div>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Receita Total</p>
+                                <p className="text-2xl font-black text-gray-900 mt-1">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.totalRevenue)}
+                                </p>
+                            </div>
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                                <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4">
+                                    <Building2 size={20} />
+                                </div>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Lojas</p>
+                                <p className="text-2xl font-black text-gray-900 mt-1">{metrics.totalStores}</p>
+                            </div>
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                                <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center mb-4">
+                                    <Users size={20} />
+                                </div>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Entregadores Online</p>
+                                <p className="text-2xl font-black text-gray-900 mt-1">{metrics.activeCouriers}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {currentTab === 'establishments' && (
                     <div className="space-y-4">
                         <h2 className="text-lg font-bold mb-4">Gerenciar Lojas</h2>
