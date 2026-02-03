@@ -65,6 +65,8 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
   const [cart, setCart] = useState<any[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const DELIVERY_FEE = 6.00;
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [dbProducts, setDbProducts] = useState<Product[]>([]);
   const [dbStores, setDbStores] = useState<Store[]>([]);
@@ -328,7 +330,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
       store_id: selectedStore.id,
       items: cart.map(p => ({ product: p, quantity: 1 })),
       status: 'pending',
-      total: cart.reduce((acc, curr) => acc + curr.price, 0),
+      total: cart.reduce((acc, curr) => acc + curr.price, 0) + DELIVERY_FEE,
       address: `${activeAddress.details}${activeAddress.complement ? ', ' + activeAddress.complement : ''}`
     };
 
@@ -342,13 +344,10 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
     if (newOrder) {
       setDbOrders(prev => [newOrder, ...prev]);
     } else {
-      // In case of critical failure, we might need to alert the user
-      // but since they are already in the success screen, we should 
-      // handle this gracefully or revert if possible. 
-      // For now, let's keep it simple as createOrder rarely fails if connection is ok.
       console.error('Failed to persist order to database');
     }
   };
+
 
   const addNewAddress = (e: React.FormEvent) => {
     e.preventDefault();
@@ -404,7 +403,8 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
     }
   };
 
-  const total = cart.reduce((acc, curr) => acc + curr.price, 0);
+  const subtotal = cart.reduce((acc, curr) => acc + curr.price, 0);
+  const total = subtotal + DELIVERY_FEE;
 
   // --- MODAL COMPONENT ---
   const AddressModal = () => (
@@ -591,7 +591,7 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
                 </div>
               </div>
               <h3 className="font-black text-lg text-gray-900 ml-1">{store.name}</h3>
-              <p className="text-xs text-gray-400 font-bold ml-1 uppercase tracking-widest">{store.category} • Frete Grátis</p>
+              <p className="text-xs text-gray-400 font-bold ml-1 uppercase tracking-widest">{store.category} • Frete R$ 6,00</p>
             </div>
           ))}
         </div>
@@ -983,6 +983,14 @@ const CustomerApp: React.FC<CustomerAppProps> = ({ onSwitchMode, onPlaceOrder, o
           </section>
 
           <section className="pt-4 border-t border-dashed">
+            <div className="flex justify-between text-sm mb-2 text-gray-400 font-bold uppercase tracking-wide">
+              <span>Subtotal</span>
+              <span>R${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm mb-4 text-gray-400 font-bold uppercase tracking-wide">
+              <span>Taxa de Entrega</span>
+              <span>R${DELIVERY_FEE.toFixed(2)}</span>
+            </div>
             <div className="flex justify-between text-xl pt-4 border-t border-gray-100">
               <span className="font-black text-gray-900">Total</span>
               <span className="font-black text-red-600">R${total.toFixed(2)}</span>
