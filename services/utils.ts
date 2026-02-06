@@ -58,3 +58,54 @@ export const fetchCNPJData = async (cnpjString: string) => {
         throw error;
     }
 };
+
+export const validateCNH = (cnh: string): boolean => {
+    cnh = cnh.replace(/\D/g, '');
+
+    if (cnh.length !== 11 || /^(\d)\1+$/.test(cnh)) {
+        return false;
+    }
+
+    let d1 = 0;
+    let d2 = 0;
+
+    for (let i = 0, j = 9; i < 9; i++, j--) {
+        d1 += parseInt(cnh.charAt(i)) * j;
+    }
+
+    let v1 = d1 % 11;
+    if (v1 >= 10) v1 = 0;
+
+    for (let i = 0, j = 1, k = 9; i < 9; i++, j++, k--) {
+        d2 += parseInt(cnh.charAt(i)) * j;
+    }
+
+    let v2 = d2 % 11;
+    if (v2 >= 10) v2 = 0;
+
+    // Many implementations use a specific algorithm for CNH. 
+    // Refined CNH algorithm for Brazil:
+    let c = cnh.split('').map(Number);
+    let s1 = 0;
+    for (let i = 0, j = 9; i < 9; i++, j--) s1 += c[i] * j;
+
+    let dv1 = s1 % 11;
+    let incr = 0;
+    if (dv1 >= 10) {
+        dv1 = 0;
+        incr = 2;
+    }
+
+    let s2 = 0;
+    for (let i = 0, j = 1; i < 9; i++, j++) s2 += c[i] * j;
+
+    let dv2 = (s2 % 11) - incr;
+    if (dv2 < 0) dv2 += 11;
+    if (dv2 >= 10) dv2 = 0;
+
+    return dv1 === c[9] && dv2 === c[10];
+};
+
+export const formatCNH = (value: string): string => {
+    return value.replace(/\D/g, '').substring(0, 11);
+};

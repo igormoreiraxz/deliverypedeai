@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { AppView } from '../../types';
 import { Mail, Lock, User, ArrowRight, ChevronLeft, Loader2, Zap, Navigation, IdCard } from 'lucide-react';
+import { validateCNH, formatCNH } from '../../services/utils';
 
 interface LoginCourierProps {
     onBack: () => void;
@@ -25,6 +26,11 @@ const LoginCourier: React.FC<LoginCourierProps> = ({ onBack, onLoginSuccess }) =
 
         try {
             if (isSignUp) {
+                // Validação de CNH
+                if (!validateCNH(cnh)) {
+                    throw new Error('CNH inválida. Por favor, confira o número.');
+                }
+
                 const { error: signUpError } = await supabase.auth.signUp({
                     email,
                     password,
@@ -38,6 +44,7 @@ const LoginCourier: React.FC<LoginCourierProps> = ({ onBack, onLoginSuccess }) =
                 });
                 if (signUpError) throw signUpError;
                 alert('Cadastro enviado! Confirme seu e-mail.');
+                setIsSignUp(false);
             } else {
                 const { error: signInError, data } = await supabase.auth.signInWithPassword({
                     email,
@@ -95,7 +102,7 @@ const LoginCourier: React.FC<LoginCourierProps> = ({ onBack, onLoginSuccess }) =
                                     placeholder="CNH (Número do registro)"
                                     className="w-full pl-14 pr-6 py-5 bg-white border-2 border-transparent rounded-[2rem] text-sm font-bold focus:border-red-600/20 focus:ring-4 focus:ring-red-600/5 shadow-sm group-hover:bg-white transition-all"
                                     value={cnh}
-                                    onChange={e => setCnh(e.target.value)}
+                                    onChange={e => setCnh(formatCNH(e.target.value))}
                                 />
                                 <IdCard className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-red-600 transition-colors" size={20} />
                             </div>
