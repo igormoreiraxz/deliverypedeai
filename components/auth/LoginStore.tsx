@@ -129,7 +129,7 @@ const LoginStore: React.FC<LoginStoreProps> = ({ onBack, onLoginSuccess }) => {
                                 </div>
                                 <div>
                                     <h3 className="font-black italic text-lg leading-none mb-1">PEDEAÍ BASIC</h3>
-                                    <p className="text-2xl font-black text-white mb-2">R$ 0,00<span className="text-xs text-gray-500 ml-1">/mês</span></p>
+                                    <p className="text-2xl font-black text-white mb-2">R$ 100,00<span className="text-xs text-gray-500 ml-1">/mês</span></p>
                                     <div className="space-y-1">
                                         <p className="text-[10px] text-gray-400 uppercase font-bold">• 15% de comissão por venda</p>
                                         <p className="text-[10px] text-gray-400 uppercase font-bold">• Repasse em 7 dias</p>
@@ -152,7 +152,7 @@ const LoginStore: React.FC<LoginStoreProps> = ({ onBack, onLoginSuccess }) => {
                                 </div>
                                 <div>
                                     <h3 className="font-black italic text-lg leading-none mb-1">PEDEAÍ PRO</h3>
-                                    <p className="text-2xl font-black text-white mb-2">R$ 99,90<span className="text-xs text-gray-500 ml-1">/mês</span></p>
+                                    <p className="text-2xl font-black text-white mb-2">R$ 150,00<span className="text-xs text-gray-500 ml-1">/mês</span></p>
                                     <div className="space-y-1">
                                         <p className="text-[10px] text-gray-400 uppercase font-bold">• 10% de comissão por venda</p>
                                         <p className="text-[10px] text-gray-400 uppercase font-bold">• Destaque na plataforma</p>
