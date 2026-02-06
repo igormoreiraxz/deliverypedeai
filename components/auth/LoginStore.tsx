@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { AppView } from '../../types';
 import { Mail, Lock, Store, ArrowRight, ChevronLeft, Loader2, Zap, Building2 } from 'lucide-react';
+import { validateCNPJ, formatCNPJ, fetchCNPJData } from '../../services/utils';
 
 interface LoginStoreProps {
     onBack: () => void;
@@ -28,6 +29,22 @@ const LoginStore: React.FC<LoginStoreProps> = ({ onBack, onLoginSuccess }) => {
         try {
             if (isSignUp) {
                 if (step === 0) {
+                    // Validação de CNPJ
+                    const cleanCnpj = cnpj.replace(/\D/g, '');
+                    if (!validateCNPJ(cleanCnpj)) {
+                        throw new Error('CNPJ inválido matematicamente.');
+                    }
+
+                    // Verificação de Existência
+                    setLoading(true);
+                    try {
+                        const cnpjData = await fetchCNPJData(cleanCnpj);
+                        // Se chegou aqui, o CNPJ existe. Podemos opcionalmente usar cnpjData.razao_social para preencher o nome da loja se estiver vazio
+                        if (!storeName) setStoreName(cnpjData.razao_social || cnpjData.nome_fantasia || '');
+                    } catch (err: any) {
+                        throw new Error(err.message || 'CNPJ não encontrado ou erro na verificação.');
+                    }
+
                     setStep(1);
                     setLoading(false);
                     return;
@@ -106,7 +123,7 @@ const LoginStore: React.FC<LoginStoreProps> = ({ onBack, onLoginSuccess }) => {
                                     placeholder="CNPJ do Estabelecimento"
                                     className="w-full pl-14 pr-6 py-5 bg-gray-800 border-none rounded-[2rem] text-sm font-bold focus:ring-4 focus:ring-red-500/20 shadow-inner group-hover:bg-gray-700 transition-all text-white placeholder-gray-500"
                                     value={cnpj}
-                                    onChange={e => setCnpj(e.target.value)}
+                                    onChange={e => setCnpj(formatCNPJ(e.target.value))}
                                 />
                                 <Building2 className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-red-500 transition-colors" size={20} />
                             </div>
